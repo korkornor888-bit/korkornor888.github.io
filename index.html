@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบจัดการงาน — ฝ่ายนโยบาย</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:Tahoma,'Segoe UI',Sarabun,sans-serif;margin:0;background:#f6f7f9;color:#1e293b;font-size:14px}
+.wrap{max-width:820px;margin:0 auto;padding:13px}
+.top{background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:20}
+.top h1{font-size:15px;margin:0}
+.who{font-size:11px;color:#64748b}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:7px 13px;font-size:13px;font-weight:600;border-radius:8px;border:none;cursor:pointer;font-family:inherit}
+.bp{background:#4f46e5;color:#fff}.bp:hover{background:#4338ca}
+.bg{background:#fff;color:#475569;border:1px solid #cbd5e1}.bg:hover{background:#f1f5f9}
+.bd{background:#fff;color:#b91c1c;border:1px solid #fca5a5}.bd:hover{background:#fef2f2}
+.bs{background:#059669;color:#fff}.bs:hover{background:#047857}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:13px;margin-bottom:11px}
+.chip{display:inline-block;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;margin-right:5px}
+.kind{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px}
+.k-i{background:#fef3c7;color:#92400e}
+.k-p{background:#e0e7ff;color:#3730a3}
+.muted{color:#94a3b8;font-size:12px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:11px}
+@media(max-width:560px){.quick{grid-template-columns:repeat(2,1fr)}}
+.q{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:11px;text-align:center;cursor:pointer}
+.q:hover{border-color:#a5b4fc}
+.q.act{border-color:#4f46e5;background:#eef2ff}
+.q b{display:block;font-size:21px;line-height:1.2}
+.q span{font-size:11px;color:#64748b}
+.sec{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;overflow:hidden}
+.sec-h{display:flex;align-items:center;justify-content:space-between;padding:12px 13px;cursor:pointer;user-select:none;font-weight:600}
+.sec-h:hover{background:#f8fafc}
+.sec-h .ar{color:#94a3b8;font-size:11px;transition:transform .2s}
+.sec.open .sec-h .ar{transform:rotate(90deg)}
+.sec-b{padding:0 13px 13px;display:none}
+.sec.open .sec-b{display:block}
+.st{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden}
+.st-h{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;cursor:pointer}
+.st-h:hover{background:#f8fafc}
+.st-t{flex:1;min-width:0}
+.st-n{font-weight:600;font-size:13px}
+.st-hint{font-size:11px;color:#94a3b8}
+.st-b{padding:0 11px 11px;display:none}
+.st.open .st-b{display:block}
+.entry{border-left:3px solid #e2e8f0;padding:7px 0 7px 9px;margin-bottom:7px}
+.entry .r1{display:flex;justify-content:space-between;gap:8px}
+.entry .ti{font-weight:500;font-size:13px}
+.entry .dt{font-size:11px;color:#94a3b8;white-space:nowrap}
+.entry .de{font-size:12px;color:#64748b;margin-top:2px;white-space:pre-wrap}
+.entry .ct{display:inline-block;font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:999px;margin-top:4px}
+label{display:block;font-size:12px;font-weight:600;color:#64748b;margin:9px 0 4px}
+input,select,textarea{width:100%;padding:8px 10px;font-size:13px;font-family:inherit;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#1e293b}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#818cf8;box-shadow:0 0 0 3px #e0e7ff}
+textarea{min-height:58px;resize:vertical}
+.radios{display:flex;flex-wrap:wrap;gap:6px}
+.radio{padding:6px 12px;border:1px solid #cbd5e1;border-radius:999px;font-size:12px;cursor:pointer;background:#fff}
+.radio.on{background:#4f46e5;color:#fff;border-color:#4f46e5}
+.tag{display:inline-flex;align-items:center;gap:5px;background:#eef2ff;color:#3730a3;font-size:12px;padding:3px 9px;border-radius:999px;margin:3px 4px 0 0}
+.tag b{cursor:pointer}
+.sug{border:1px solid #e2e8f0;border-radius:8px;margin-top:4px;max-height:150px;overflow-y:auto}
+.sug div{padding:7px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #f1f5f9}
+.sug div:hover{background:#f1f5f9}
+.center{text-align:center;padding:34px 14px;color:#94a3b8}
+.hidden{display:none!important}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid #c7d2fe;border-top-color:#4f46e5;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:14px;right:14px;background:#1e293b;color:#fff;padding:9px 15px;border-radius:999px;font-size:13px;z-index:60;max-width:80vw}
+.err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:11px;border-radius:8px;font-size:13px}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:32px;max-width:380px;width:100%}
+.login-card h2{margin:0 0 6px;font-size:19px;text-align:center}
+.login-card p{color:#64748b;font-size:13px;margin:0 0 18px;text-align:center}
+.tabs{display:flex;gap:6px;margin-bottom:11px}
+.tab{flex:1;text-align:center;padding:7px;border-radius:8px;font-size:13px;cursor:pointer;color:#64748b;background:#f1f5f9}
+.tab.on{background:#4f46e5;color:#fff}
+</style>
+</head>
+<body>
+
+<!-- =============== ตั้งค่าตรงนี้ =============== -->
+<script>
+var SUPABASE_URL = "https://vyfenpgcvyqlsododxsw.supabase.co";
+var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ5ZmVucGdjdnlxbHNvZG9keHN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNzUzNzgsImV4cCI6MjEwMjY1MTM3OH0.Z846cw93rdohw6-73a3VkdNrV76qmLE6LaZrMqQbe7E";
+</script>
+<!-- ============================================= -->
+
+<div id="app"></div>
+
+<script>
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+var app = document.getElementById("app");
+var ME = null;      // { id, email, name, role }
+var D = null;       // current work-detail state cache
+var OPEN = "wsys_open_v8";
+
+var KIND_ISSUE = "ประเด็นปัญหา", KIND_PROJECT = "โครงการ";
+var ISSUE_STATUS = ["รอคัดกรอง", "กำลังรวบรวมข้อมูล", "ทำเป็นโครงการ", "ไม่ทำ"];
+var PROJECT_STATUS = ["กำลังดำเนินการ", "ติดขัด/มีปัญหา", "รอการตัดสินใจ", "เสร็จสิ้น", "ไม่สำเร็จ"];
+
+var FLOW = {};
+FLOW[KIND_ISSUE] = [
+  { n:1, name:"รับประเด็น", hint:"บันทึกว่าเกิดอะไรขึ้น โดยยังไม่ต้องคิดวิธีแก้", done:"ได้ประเด็นที่พร้อมคัดกรอง",
+    fields:[
+      { key:"แหล่งที่มา", type:"choice", opts:["นักเรียนแจ้งโดยตรง","ครูเสนอ","ฝ่ายอื่นส่งมา","สมาชิกฝ่ายพบเอง","จากผลโครงการเดิม","จากแบบสำรวจ"] },
+      { key:"ใครได้รับผลกระทบ", type:"text", ph:"เช่น นักเรียนที่ใช้ห้องสมุดช่วงเย็น" },
+      { key:"หลักฐานที่มีตอนนี้", type:"textarea", ph:"แยกให้ชัดว่าเป็นข้อมูลจริงหรือความเห็น" },
+      { key:"สิ่งที่ยังไม่รู้", type:"textarea", ph:"อะไรที่ต้องไปหาข้อมูลเพิ่ม" } ] },
+  { n:2, name:"คัดกรองและกำหนดขอบเขต", hint:"ตัดสินว่าเรื่องนี้ควรใช้กำลังคนของฝ่ายหรือไม่", done:"ได้ขอบเขตและโจทย์การศึกษา",
+    fields:[
+      { key:"เกี่ยวข้องกับฝ่าย", type:"choice", opts:["เกี่ยวข้อง","เกี่ยวข้องหลายฝ่าย","ไม่เกี่ยวข้อง — ส่งต่อ"] },
+      { key:"ความเร่งด่วน", type:"choice", opts:["เร่งด่วนมาก","เร่งด่วน","ไม่เร่งด่วน"] },
+      { key:"เกี่ยวข้องกับงานอื่น", type:"worklink", ph:"ค้นหาชื่องาน เลือกได้หลายอัน" },
+      { key:"ขอบเขต", type:"textarea", ph:"จะศึกษาแค่ไหน" } ] },
+  { n:3, name:"รวบรวมและวิเคราะห์ข้อมูล", hint:"พิสูจน์ว่าปัญหามีจริงไหม สาเหตุคืออะไร", done:"มีข้อมูลพอสำหรับตัดสินใจว่าจะทำเป็นโครงการหรือไม่",
+    fields:[
+      { key:"คำถามที่ต้องตอบ", type:"textarea", ph:"เราต้องรู้อะไรถึงจะตัดสินใจได้" },
+      { key:"ข้อค้นพบ", type:"textarea", ph:"ข้อมูลบอกอะไรเรา" },
+      { key:"สาเหตุ", type:"textarea", ph:"อะไรทำให้เกิดปัญหานี้" },
+      { key:"ข้อจำกัด", type:"textarea", ph:"งบ เวลา คน กฎระเบียบ ฯลฯ" } ] }
+];
+FLOW[KIND_PROJECT] = [
+  { n:1, name:"ออกแบบแนวทาง", hint:"เปลี่ยนข้อค้นพบให้เป็นแนวทางที่ทำได้จริง", done:"ได้แผนที่พร้อมนำเสนอ",
+    fields:[
+      { key:"ผลลัพธ์ที่ต้องการ", type:"textarea" }, { key:"ทางเลือกที่พิจารณา", type:"textarea" },
+      { key:"แนวทางที่เลือก", type:"textarea" }, { key:"เหตุผลที่เลือก", type:"textarea" },
+      { key:"ทรัพยากรที่ต้องใช้", type:"textarea" }, { key:"ความเสี่ยง", type:"textarea" },
+      { key:"ตัวชี้วัด", type:"textarea" } ] },
+  { n:2, name:"เสนอและปรับ", hint:"เอาแผนไปคุยกับผู้เกี่ยวข้อง แล้วปรับตามข้อจำกัดจริง", done:"แผนได้รับอนุมัติ พร้อมเริ่มทำจริง",
+    fields:[
+      { key:"ผลคุยกับตัวแทน/คนในฝ่าย", type:"textarea" }, { key:"ผลคุยกับครู/ผู้มีอำนาจ", type:"textarea" },
+      { key:"ผลการตัดสินใจ", type:"choice", opts:["ยังไม่ตัดสินใจ","ผ่าน","ผ่านแบบมีเงื่อนไข","ต้องปรับแล้วเสนอใหม่","ไม่อนุมัติ"] },
+      { key:"สิ่งที่ต้องปรับตามความเห็น", type:"textarea" } ] },
+  { n:3, name:"ดำเนินการและติดตาม", hint:"แตกงานย่อย มอบหมาย แล้วติดตามจนเสร็จ", done:"งานเดินตามแผน",
+    fields:[
+      { key:"งานย่อยและผู้รับผิดชอบ", type:"textarea" }, { key:"ความคืบหน้าตอนนี้", type:"textarea" },
+      { key:"ปัญหาที่พบ", type:"textarea" }, { key:"ต้องให้หัวจ่ายช่วยไหม", type:"choice", opts:["ไม่ต้อง","ต้องการให้ช่วย"] } ] },
+  { n:4, name:"ประเมินผลและสรุป", hint:"เทียบผลจริงกับเป้าหมาย แล้วสรุปบทเรียน", done:"ปิดโครงการพร้อมบทเรียนและข้อเสนอ",
+    fields:[
+      { key:"สิ่งที่ทำไปจริง", type:"textarea" }, { key:"ผลเทียบกับเป้าหมาย", type:"textarea" },
+      { key:"สาเหตุที่ได้ผลแบบนี้", type:"textarea" }, { key:"บทเรียน", type:"textarea" },
+      { key:"ข้อเสนอขั้นต่อไป", type:"choice", opts:["ยังไม่สรุป","ทำต่อ","ปรับแล้วทำใหม่","ขยายผล","ยุติ"] } ] }
+];
+
+/* ---------------- boot ---------------- */
+init();
+function init() {
+  sb.auth.getSession().then(function (r) {
+    var session = r.data.session;
+    if (session) loadMe_(session.user); else renderLogin();
+  });
+  sb.auth.onAuthStateChange(function (event, session) {
+    if (event === "SIGNED_IN" && !ME) loadMe_(session.user);
+    if (event === "SIGNED_OUT") { ME = null; renderLogin(); }
+  });
+}
+function loadMe_(user) {
+  sb.from("profiles").select("*").eq("id", user.id).single().then(function (r) {
+    if (r.error || !r.data) { renderLogin("โปรไฟล์ผู้ใช้ยังไม่พร้อม ลองรีเฟรชสัก 2-3 วิ"); return; }
+    ME = r.data;
+    renderHome();
+  });
+}
+
+/* ---------------- login / signup ---------------- */
+function renderLogin(err) {
+  app.innerHTML =
+    '<div class="login-wrap"><div class="login-card">' +
+    '<h2>ระบบจัดการงาน</h2><p>ฝ่ายนโยบาย</p>' +
+    '<div class="tabs"><div class="tab on" id="tabLogin" onclick="swTab(1)">เข้าสู่ระบบ</div><div class="tab" id="tabSign" onclick="swTab(0)">สมัครใหม่</div></div>' +
+    (err ? '<div class="err" style="margin-bottom:9px">' + esc(err) + '</div>' : '') +
+    '<div id="nameWrap" class="hidden"><label>ชื่อที่แสดง</label><input id="lname" placeholder="เช่น ครูมาลี"></div>' +
+    '<label>อีเมล</label><input id="lemail" type="email" placeholder="you@example.com">' +
+    '<label>รหัสผ่าน</label><input id="lpass" type="password" placeholder="อย่างน้อย 6 ตัวอักษร">' +
+    '<button class="btn bp" style="width:100%;margin-top:14px" onclick="doAuth()" id="authBtn">เข้าสู่ระบบ</button>' +
+    '<div id="lmsg" style="margin-top:9px"></div>' +
+    '</div></div>';
+}
+var SIGNUP_MODE = false;
+function swTab(signup) {
+  SIGNUP_MODE = !!signup;
+  document.getElementById("tabLogin").className = "tab" + (signup ? "" : " on");
+  document.getElementById("tabSign").className = "tab" + (signup ? " on" : "");
+  document.getElementById("nameWrap").className = signup ? "" : "hidden";
+  document.getElementById("authBtn").textContent = signup ? "สมัครสมาชิก" : "เข้าสู่ระบบ";
+}
+function doAuth() {
+  var email = document.getElementById("lemail").value.trim();
+  var pass = document.getElementById("lpass").value;
+  var msg = document.getElementById("lmsg");
+  msg.innerHTML = '<span class="spin"></span>';
+  if (SIGNUP_MODE) {
+    var name = document.getElementById("lname").value.trim();
+    if (!name) { msg.innerHTML = '<div class="err">กรอกชื่อที่แสดงก่อน</div>'; return; }
+    sb.auth.signUp({ email: email, password: pass, options: { data: { name: name } } }).then(function (r) {
+      if (r.error) { msg.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+      if (r.data.session) { loadMe_(r.data.user); }
+      else msg.innerHTML = '<div class="muted">สมัครสำเร็จ — เช็คอีเมลเพื่อยืนยันตัวตน แล้วกลับมาเข้าสู่ระบบ</div>';
+    });
+  } else {
+    sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
+      if (r.error) { msg.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+      loadMe_(r.data.user);
+    });
+  }
+}
+function logout() { sb.auth.signOut(); }
+
+/* ---------------- home ---------------- */
+var FILTER = "";
+function renderHome() {
+  app.innerHTML =
+    '<div class="top"><div><h1>ระบบจัดการงาน</h1><div class="who">' + esc(ME.name) + ' · ' + (ME.role === "head" ? "หัวจ่าย" : "สมาชิก") + '</div></div>' +
+    '<div style="display:flex;gap:6px">' +
+    (ME.role === "head" ? '<button class="btn bg" onclick="renderUsers()">ผู้ใช้</button>' : "") +
+    '<button class="btn bg" onclick="renderTrash()">ถังขยะ</button>' +
+    '<button class="btn bg" onclick="logout()">ออกจากระบบ</button></div></div>' +
+    '<div class="wrap"><div id="list" class="center"><span class="spin"></span></div></div>';
+  loadHome();
+}
+function loadHome() {
+  sb.from("works").select("*").neq("archive", "ถังขยะ").order("created_at", { ascending: false }).then(function (r) {
+    if (r.error) { document.getElementById("list").innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    drawHome(r.data || []);
+  });
+}
+function drawHome(works) {
+  var counts = {};
+  works.forEach(function (w) { counts[w.status] = (counts[w.status] || 0) + 1; });
+  var quicks = ISSUE_STATUS.concat(PROJECT_STATUS);
+  var html = '<div class="quick">' + quicks.slice(0, 4).map(function (s) {
+    return '<div class="q' + (FILTER === s ? " act" : "") + '" onclick="setFilter(\'' + esc(s) + '\')"><b>' + (counts[s] || 0) + '</b><span>' + esc(s) + '</span></div>';
+  }).join("") + '</div>';
+  html += '<div style="margin-bottom:9px"><input placeholder="ค้นหางาน…" oninput="searchWorks(this.value)"></div>';
+  html += '<div class="card" style="text-align:center;cursor:pointer;color:#4f46e5;font-weight:600" onclick="showCreate()">+ เพิ่มประเด็นปัญหาใหม่</div>';
+  var shown = works.filter(function (w) { return !FILTER || w.status === FILTER; });
+  if (!shown.length) html += '<div class="center">ยังไม่มีงานในหมวดนี้</div>';
+  shown.forEach(function (w) {
+    html += '<div class="card" style="cursor:pointer" onclick="openWork(\'' + esc(w.code) + '\')">' +
+      '<span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span> ' +
+      '<span class="chip">' + esc(w.code) + '</span>' +
+      '<div style="font-weight:600;margin-top:5px">' + esc(w.name) + '</div>' +
+      '<div class="muted" style="margin-top:3px">' + esc(w.status || "-") + ' · ผู้รับผิดชอบ ' + esc(w.owner) + '</div></div>';
+  });
+  document.getElementById("list").innerHTML = html;
+  window._works = works;
+}
+function setFilter(s) { FILTER = (FILTER === s ? "" : s); drawHome(window._works || []); }
+function searchWorks(q) {
+  q = q.trim().toLowerCase();
+  var all = window._works || [];
+  var f = !q ? all : all.filter(function (w) { return w.name.toLowerCase().indexOf(q) >= 0 || w.code.toLowerCase().indexOf(q) >= 0; });
+  drawHome(f);
+}
+function showCreate() {
+  var name = prompt("ชื่อประเด็นปัญหาใหม่:");
+  if (!name || !name.trim()) return;
+  createWork(name.trim());
+}
+function createWork(name) {
+  sb.from("works").select("code").eq("kind", KIND_ISSUE).then(function (r) {
+    var n = (r.data || []).length + 1;
+    var code = "IS" + String(n).padStart(3, "0");
+    sb.from("works").insert({ code: code, kind: KIND_ISSUE, name: name, owner: ME.name, status: ISSUE_STATUS[0] }).then(function (ir) {
+      if (ir.error) { toast(ir.error.message); return; }
+      toast("สร้างแล้ว"); openWork(code);
+    });
+  });
+}
+
+/* ---------------- work detail ---------------- */
+function openWork(code) {
+  app.innerHTML = '<div class="wrap center"><span class="spin"></span></div>';
+  Promise.all([
+    sb.from("works").select("*").eq("code", code).single(),
+    sb.from("fields").select("*").eq("code", code),
+    sb.from("logs").select("*").eq("code", code).order("log_date", { ascending: false }),
+    sb.from("works").select("code,name").neq("code", code).neq("archive", "ถังขยะ")
+  ]).then(function (rs) {
+    if (rs[0].error) { app.innerHTML = '<div class="wrap"><div class="err">' + esc(rs[0].error.message) + '</div></div>'; return; }
+    D = { work: rs[0].data, fields: {}, logs: rs[2].data || [], others: rs[3].data || [] };
+    (rs[1].data || []).forEach(function (f) { D.fields[f.stage + "|" + f.key] = f.value; });
+    drawWork();
+  });
+}
+function drawWork() {
+  var w = D.work, kind = w.kind, flow = FLOW[kind];
+  var html = '<div class="top"><button class="btn bg" onclick="renderHome()">← กลับ</button>' +
+    '<div style="display:flex;gap:6px">';
+  if (kind === KIND_ISSUE && w.status !== ISSUE_STATUS[2]) html += '<button class="btn bs" onclick="convertToProject()">แปลงเป็นโครงการ</button>';
+  html += '<button class="btn bd" onclick="trashWork()">ลบ</button></div></div>';
+  html += '<div class="wrap">';
+  html += '<div class="card"><span class="kind ' + (kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(kind) + '</span> <span class="chip">' + esc(w.code) + '</span>';
+  html += '<h2 style="margin:8px 0 4px;font-size:17px">' + esc(w.name) + '</h2>';
+  html += '<label>สถานะ</label><select onchange="updateWork(\'status\', this.value)">' +
+    (kind === KIND_ISSUE ? ISSUE_STATUS : PROJECT_STATUS).map(function (s) {
+      return '<option' + (s === w.status ? " selected" : "") + '>' + esc(s) + '</option>';
+    }).join("") + '</select>';
+  html += '<label>ผู้รับผิดชอบ</label><input value="' + esc(w.owner) + '" onchange="updateWork(\'owner\', this.value)">';
+  html += '</div>';
+
+  flow.forEach(function (stage) {
+    var body = '<div class="muted" style="margin-bottom:8px">' + esc(stage.hint) + '</div>';
+    stage.fields.forEach(function (fd) { body += renderField(stage.n, fd); });
+    html += '<div class="st open"><div class="st-h"><div class="st-t"><div class="st-n">ขั้น ' + stage.n + ' — ' + esc(stage.name) + '</div><div class="st-hint">' + esc(stage.done) + '</div></div></div><div class="st-b" style="display:block">' + body + '</div></div>';
+  });
+
+  html += '<div class="sec open"><div class="sec-h"><span>บันทึก/ไทม์ไลน์</span></div><div class="sec-b" style="display:block">';
+  html += '<label>หัวข้อ</label><input id="nti"><label>รายละเอียด</label><textarea id="nde"></textarea>' +
+    '<label>คุยกับใคร (ถ้ามี)</label><input id="nct"><label>ลิงก์ (ถ้ามี)</label><input id="nli">' +
+    '<button class="btn bp" style="margin-top:9px" onclick="addLog()">บันทึก</button>';
+  D.logs.forEach(function (l) { html += entry(l); });
+  html += '</div></div>';
+  html += '</div>';
+  app.innerHTML = html;
+}
+function renderField(stage, fd) {
+  var val = D.fields[stage + "|" + fd.key] || "";
+  var id = "fld_" + stage + "_" + key2id(fd.key);
+  if (fd.type === "choice") {
+    return '<label>' + esc(fd.key) + '</label><div class="radios">' + fd.opts.map(function (o) {
+      return '<div class="radio' + (o === val ? " on" : "") + '" onclick="pick(this,' + stage + ',\'' + esc(fd.key) + '\',\'' + esc(o) + '\')">' + esc(o) + '</div>';
+    }).join("") + '</div>';
+  }
+  if (fd.type === "worklink") {
+    var sel = val ? val.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+    return '<label>' + esc(fd.key) + '</label><div id="' + id + '_tags">' + sel.map(function (cd) {
+      var nm = cd; D.others.forEach(function (x) { if (x.code === cd) nm = cd + " " + x.name; });
+      return '<span class="tag">' + esc(nm) + ' <b onclick="unlink(' + stage + ',\'' + esc(fd.key) + '\',\'' + esc(cd) + '\')">✕</b></span>';
+    }).join("") + '</div><input id="' + id + '" placeholder="ค้นหางาน…" oninput="sugg(this,' + stage + ',\'' + esc(fd.key) + '\')" style="margin-top:5px"><div id="' + id + '_sug"></div>';
+  }
+  if (fd.type === "textarea") {
+    return '<label>' + esc(fd.key) + '</label><textarea id="' + id + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">' + esc(val) + '</textarea>';
+  }
+  return '<label>' + esc(fd.key) + '</label><input id="' + id + '" value="' + esc(val) + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">';
+}
+function key2id(k) { return k.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
+function pick(el, stage, key, val) {
+  var p = el.parentNode;
+  for (var i = 0; i < p.children.length; i++) p.children[i].classList.remove("on");
+  el.classList.add("on"); svf(stage, key, val);
+}
+function svf(stage, key, val) {
+  sb.from("fields").upsert({ code: D.work.code, stage: stage, key: key, value: val, updated_at: new Date().toISOString() }, { onConflict: "code,stage,key" })
+    .then(function (r) { if (r.error) toast(r.error.message); else { D.fields[stage + "|" + key] = val; toast("บันทึกแล้ว"); } });
+}
+function sugg(inp, stage, key) {
+  var id = "fld_" + stage + "_" + key2id(key), q = inp.value.trim().toLowerCase();
+  var box = document.getElementById(id + "_sug");
+  if (!q) { box.innerHTML = ""; return; }
+  var hits = D.others.filter(function (x) { return x.name.toLowerCase().indexOf(q) >= 0 || x.code.toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+  box.innerHTML = hits.length ? '<div class="sug">' + hits.map(function (x) { return '<div onclick="link_(' + stage + ',\'' + esc(key) + '\',\'' + esc(x.code) + '\')">' + esc(x.code) + ' · ' + esc(x.name) + '</div>'; }).join("") + '</div>' : '<div class="muted" style="margin-top:4px">ไม่พบ</div>';
+}
+function curLinks(stage, key) { var v = D.fields[stage + "|" + key] || ""; return v ? v.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : []; }
+function link_(stage, key, code) { var arr = curLinks(stage, key); if (arr.indexOf(code) < 0) arr.push(code); svf(stage, key, arr.join(", ")); drawWork(); }
+function unlink(stage, key, code) { var arr = curLinks(stage, key).filter(function (c) { return c !== code; }); svf(stage, key, arr.join(", ")); drawWork(); }
+
+function entry(l) {
+  return '<div class="entry"><div class="r1"><span class="ti">' + esc(l.title) + '</span><span class="dt">' + esc(l.log_date) + '</span></div>' +
+    (l.detail ? '<div class="de">' + esc(l.detail) + '</div>' : '') + (l.contact ? '<div class="ct">คุยกับ ' + esc(l.contact) + '</div>' : '') +
+    (l.link ? '<div style="margin-top:3px"><a href="' + esc(l.link) + '" target="_blank" style="font-size:12px">เปิดลิงก์ →</a></div>' : '') +
+    '<div style="display:flex;justify-content:space-between;margin-top:3px"><span class="muted">โดย ' + esc(l.person || "-") + '</span>' +
+    '<span class="muted" style="cursor:pointer;color:#b91c1c" onclick="delLog(' + l.id + ')">ลบ</span></div></div>';
+}
+function addLog() {
+  var t = document.getElementById("nti").value.trim();
+  if (!t) return toast("กรอกหัวข้อก่อน");
+  sb.from("logs").insert({
+    code: D.work.code, title: t, detail: document.getElementById("nde").value.trim(),
+    contact: document.getElementById("nct").value.trim(), link: document.getElementById("nli").value.trim(), person: ME.name
+  }).then(function (r) { if (r.error) toast(r.error.message); else openWork(D.work.code); });
+}
+function delLog(id) {
+  if (!confirm("ลบบันทึกนี้?")) return;
+  sb.from("logs").delete().eq("id", id).then(function (r) { if (r.error) toast(r.error.message); else openWork(D.work.code); });
+}
+function updateWork(field, value) {
+  var patch = {}; patch[field] = value;
+  sb.from("works").update(patch).eq("code", D.work.code).then(function (r) {
+    if (r.error) return toast(r.error.message);
+    D.work[field] = value; toast("บันทึกแล้ว");
+  });
+}
+function convertToProject() {
+  if (!confirm("แปลงประเด็นนี้เป็นโครงการ?\nระบบจะสร้างโครงการใหม่ และคัดลอกชื่อ/ผู้รับผิดชอบไปให้")) return;
+  sb.from("works").select("code").eq("kind", KIND_PROJECT).then(function (r) {
+    var n = (r.data || []).length + 1, code = "PJ" + String(n).padStart(3, "0");
+    sb.from("works").insert({ code: code, kind: KIND_PROJECT, name: D.work.name, owner: D.work.owner, status: PROJECT_STATUS[0], from_issue: D.work.code })
+      .then(function (ir) {
+        if (ir.error) return toast(ir.error.message);
+        sb.from("works").update({ status: ISSUE_STATUS[2] }).eq("code", D.work.code).then(function () { toast("สร้างโครงการ " + code + " แล้ว"); openWork(code); });
+      });
+  });
+}
+function trashWork() {
+  if (!confirm("ย้าย \"" + D.work.name + "\" ไปถังขยะ?")) return;
+  sb.from("works").update({ archive: "ถังขยะ", deleted_at: new Date().toISOString() }).eq("code", D.work.code)
+    .then(function (r) { if (r.error) toast(r.error.message); else { toast("ย้ายไปถังขยะแล้ว"); renderHome(); } });
+}
+
+/* ---------------- trash ---------------- */
+function renderTrash() {
+  app.innerHTML = '<div class="top"><button class="btn bg" onclick="renderHome()">← กลับ</button><h1>ถังขยะ</h1><div></div></div><div class="wrap" id="trashList"><div class="center"><span class="spin"></span></div></div>';
+  sb.from("works").select("*").eq("archive", "ถังขยะ").order("deleted_at", { ascending: false }).then(function (r) {
+    var box = document.getElementById("trashList");
+    if (r.error) { box.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    var items = r.data || [];
+    if (!items.length) { box.innerHTML = '<div class="center">ถังขยะว่างเปล่า</div>'; return; }
+    box.innerHTML = items.map(function (w) {
+      return '<div class="card"><span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span> <span class="chip">' + esc(w.code) + '</span>' +
+        '<div style="font-weight:600;margin-top:5px">' + esc(w.name) + '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:8px">' +
+        '<button class="btn bg" onclick="restoreWork(\'' + esc(w.code) + '\')">กู้คืน</button>' +
+        '<button class="btn bd" onclick="permanentDelete(\'' + esc(w.code) + '\',\'' + esc(w.name).replace(/'/g, "\\'") + '\')">ลบถาวร</button></div></div>';
+    }).join("");
+  });
+}
+function restoreWork(code) {
+  sb.from("works").update({ archive: "ใช้งาน", deleted_at: null }).eq("code", code).then(function (r) { if (r.error) toast(r.error.message); else renderTrash(); });
+}
+function permanentDelete(code, name) {
+  var t = prompt('พิมพ์ชื่องาน "' + name + '" เพื่อยืนยันลบถาวร (กู้คืนไม่ได้)');
+  if (t !== name) { if (t !== null) toast("ชื่อไม่ตรง ยกเลิกการลบ"); return; }
+  sb.from("works").delete().eq("code", code).then(function (r) { if (r.error) toast(r.error.message); else { toast("ลบถาวรแล้ว"); renderTrash(); } });
+}
+
+/* ---------------- users (head only) ---------------- */
+function renderUsers() {
+  app.innerHTML = '<div class="top"><button class="btn bg" onclick="renderHome()">← กลับ</button><h1>จัดการผู้ใช้</h1><div></div></div>' +
+    '<div class="wrap"><div class="card muted">สมาชิกใหม่ต้องกด "สมัครใหม่" ด้วยตัวเองในหน้าล็อกอินก่อน 1 ครั้ง จากนั้นชื่อจะมาโผล่ในรายการนี้ให้ปรับสิทธิ์ได้</div><div id="userList" class="center"><span class="spin"></span></div></div>';
+  sb.from("profiles").select("*").order("created_at").then(function (r) {
+    var box = document.getElementById("userList");
+    if (r.error) { box.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    box.innerHTML = (r.data || []).map(function (u) {
+      return '<div class="card" style="display:flex;justify-content:space-between;align-items:center">' +
+        '<div><div style="font-weight:600">' + esc(u.name) + '</div><div class="muted">' + esc(u.email) + '</div></div>' +
+        '<select onchange="setRole(\'' + u.id + '\',this.value)" ' + (u.id === ME.id ? "disabled" : "") + '>' +
+        '<option value="member"' + (u.role === "member" ? " selected" : "") + '>สมาชิก</option>' +
+        '<option value="head"' + (u.role === "head" ? " selected" : "") + '>หัวจ่าย</option></select></div>';
+    }).join("");
+  });
+}
+function setRole(id, role) {
+  sb.from("profiles").update({ role: role }).eq("id", id).then(function (r) { if (r.error) toast(r.error.message); else toast("ปรับสิทธิ์แล้ว"); });
+}
+
+/* ---------------- utils ---------------- */
+function toast(t) { var e = document.createElement("div"); e.className = "toast"; e.textContent = t; document.body.appendChild(e); setTimeout(function () { e.remove(); }, 2800); }
+function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+</script>
+</body>
+</html>
