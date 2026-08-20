@@ -106,7 +106,7 @@ textarea:focus-visible,[tabindex]:focus-visible{
 .q b{display:block;font-size:23px;line-height:1.15;font-weight:700;letter-spacing:-.02em;background:linear-gradient(180deg,var(--brand-strong),var(--brand));-webkit-background-clip:text;background-clip:text;color:transparent}
 .q span{font-size:11px;color:var(--ink-mute);font-weight:600;overflow-wrap:break-word}
 
-.filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 @media(max-width:899px){.filters{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.filters{grid-template-columns:1fr}}
 
@@ -126,6 +126,8 @@ textarea:focus-visible,[tabindex]:focus-visible{
 .done{font-size:11.5px;color:var(--good);font-weight:600;background:transparent;padding:0;border:none;margin:1px 0 16px;display:flex;align-items:flex-start;gap:5px;line-height:1.45}
 
 .entry{border-left:3px solid var(--line);padding:9px 0 9px 12px;margin-bottom:9px;min-width:0}
+.tl-stage-h{font-size:12px;font-weight:700;padding:6px 0 6px 12px;border-left:3px dashed var(--line);margin:14px 0 4px}
+.tl-stage-h:first-child{margin-top:0}
 .entry.has-contact{border-left-color:var(--brand)}
 .entry .r1{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .entry .ti{font-weight:600;font-size:13.5px;color:var(--ink);overflow-wrap:break-word}
@@ -314,7 +316,7 @@ var ACTIVE_TAB = 1;
 var STALE_MS = 14 * 24 * 60 * 60 * 1000;
 
 var KIND_ISSUE = "ประเด็นปัญหา", KIND_PROJECT = "โครงการ";
-var ISSUE_STATUS = ["รอคัดกรอง", "กำลังรวบรวมข้อมูล", "ทำเป็นโครงการ", "ไม่ทำ"];
+var ISSUE_STATUS = ["รอคัดกรอง", "รอรวบรวมข้อมูล", "กำลังรวบรวมข้อมูล", "ทำเป็นโครงการ", "ไม่ทำ"];
 var PROJECT_STATUS = ["กำลังดำเนินการ", "ติดขัด/มีปัญหา", "รอการตัดสินใจ", "เสร็จสิ้น", "ไม่สำเร็จ"];
 
 var ISSUE_FIELDS = [
@@ -348,7 +350,8 @@ FLOW[KIND_PROJECT] = [
   { n:3, name:"ดำเนินการและติดตาม", hint:"แตกงานย่อย มอบหมาย แล้วติดตามจนเสร็จ", done:"งานเดินตามแผน", noLog:true,
     fields:[
       { key:"งานย่อยและผู้รับผิดชอบ", type:"textarea" }, { key:"ความคืบหน้าตอนนี้", type:"list" },
-      { key:"ปัญหาที่พบ", type:"textarea" }, { key:"ต้องให้หัวจ่ายช่วยไหม", type:"choice", opts:["ไม่ต้อง","ต้องการให้ช่วย"] } ] },
+      { key:"ปัญหาที่พบ", type:"textarea" }, { key:"ต้องให้หัวจ่ายช่วยไหม", type:"choice", opts:["ไม่ต้อง","ต้องการให้ช่วย"] },
+      { key:"แบบสำรวจระหว่างดำเนินการ", type:"formlink" } ] },
   { n:4, name:"ประเมินผลและสรุป", hint:"เทียบผลจริงกับเป้าหมาย แล้วสรุปบทเรียน", done:"ปิดโครงการพร้อมบทเรียนและข้อเสนอ", cmp:true, noLog:true,
     fields:[
       { key:"สิ่งที่ทำไปจริง", type:"textarea" }, { key:"ผลเทียบกับเป้าหมาย", type:"textarea" },
@@ -387,16 +390,11 @@ function renderLogin(err) {
         '<div class="login-glass"><b id="heroCount">—</b><span>งานที่กำลังดำเนินการอยู่ตอนนี้</span></div>' +
       '</div>' +
       '<div class="login-form-side"><div class="login-card">' +
-        '<h2>เข้าสู่ระบบ</h2><p>กรอกอีเมลและรหัสผ่านของคุณ</p>' +
-        '<div style="display:flex;gap:6px;margin-bottom:16px">' +
-          '<button type="button" class="btn bp" id="tabLogin2" onclick="swTab(0)" style="flex:1">เข้าสู่ระบบ</button>' +
-          '<button type="button" class="btn bg" id="tabSign2" onclick="swTab(1)" style="flex:1">สมัครใหม่</button>' +
-        '</div>' +
+        '<h2>ลงชื่อเข้าใช้</h2><p>กรอกอีเมลและรหัสผ่านของคุณ</p>' +
         (err ? '<div class="err" style="margin-bottom:9px">' + esc(err) + '</div>' : '') +
-        '<div id="nameWrap" class="hidden"><label>ชื่อที่แสดง</label><input id="lname" placeholder="เช่น ครูมาลี"></div>' +
         '<label>อีเมล</label><input id="lemail" type="email" placeholder="you@example.com">' +
         '<label>รหัสผ่าน</label><input id="lpass" type="password" placeholder="อย่างน้อย 6 ตัวอักษร">' +
-        '<button class="btn bp" style="width:100%;margin-top:14px" onclick="doAuth()" id="authBtn">เข้าสู่ระบบ</button>' +
+        '<button class="btn bp" style="width:100%;margin-top:14px" onclick="doAuth()" id="authBtn">ลงชื่อเข้าใช้</button>' +
         '<div id="lmsg" style="margin-top:9px"></div>' +
       '</div></div>' +
     '</div>';
@@ -405,33 +403,25 @@ function renderLogin(err) {
     if (el && !r.error) el.textContent = (r.count || 0);
   });
 }
-var SIGNUP_MODE = false;
-function swTab(signup) {
-  SIGNUP_MODE = !!signup;
-  document.getElementById("tabLogin2").className = "btn " + (signup ? "bg" : "bp");
-  document.getElementById("tabSign2").className = "btn " + (signup ? "bp" : "bg");
-  document.getElementById("nameWrap").className = signup ? "" : "hidden";
-  document.getElementById("authBtn").textContent = signup ? "สมัครสมาชิก" : "เข้าสู่ระบบ";
-}
 function doAuth() {
   var email = document.getElementById("lemail").value.trim();
   var pass = document.getElementById("lpass").value;
   var msg = document.getElementById("lmsg");
   msg.innerHTML = '<span class="spin"></span>';
-  if (SIGNUP_MODE) {
-    var name = document.getElementById("lname").value.trim();
-    if (!name) { msg.innerHTML = '<div class="err">กรอกชื่อที่แสดงก่อน</div>'; return; }
-    sb.auth.signUp({ email: email, password: pass, options: { data: { name: name } } }).then(function (r) {
-      if (r.error) { msg.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
-      if (r.data.session) { loadMe_(r.data.user); }
-      else msg.innerHTML = '<div class="muted">สมัครสำเร็จ — เช็คอีเมลเพื่อยืนยันตัวตน แล้วกลับมาเข้าสู่ระบบ</div>';
+  sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
+    if (!r.error) { loadMe_(r.data.user); return; }
+    // ไม่มีบัญชีนี้ (หรือรหัสผ่านผิด) — ลองสมัครให้อัตโนมัติ
+    sb.auth.signUp({ email: email, password: pass, options: { data: { name: "name1122" } } }).then(function (r2) {
+      if (r2.error) { msg.innerHTML = '<div class="err">' + esc(r2.error.message) + '</div>'; return; }
+      var identities = (r2.data.user && r2.data.user.identities) || [];
+      if (identities.length === 0) {
+        msg.innerHTML = '<div class="err">อีเมลนี้มีบัญชีอยู่แล้ว — รหัสผ่านที่กรอกไม่ถูกต้อง</div>';
+        return;
+      }
+      if (r2.data.session) { loadMe_(r2.data.user); }
+      else msg.innerHTML = '<div class="muted">สร้างบัญชีใหม่แล้ว — เช็คอีเมลเพื่อยืนยันตัวตน แล้วกลับมาลงชื่อเข้าใช้อีกครั้ง</div>';
     });
-  } else {
-    sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
-      if (r.error) { msg.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
-      loadMe_(r.data.user);
-    });
-  }
+  });
 }
 function logout() { sb.auth.signOut(); }
 
@@ -441,7 +431,8 @@ function railHtml(active) {
     { id: "home", label: "หน้าแรก", fn: "renderHome()" },
     { id: "archive", label: "คลัง", fn: "renderArchive()" },
     { id: "trash", label: "ถังขยะ", fn: "renderTrash()" },
-    { id: "tags", label: "จัดการแท็ก", fn: "renderTags()" }
+    { id: "tags", label: "จัดการแท็ก", fn: "renderTags()" },
+    { id: "myinfo", label: "ข้อมูลของฉัน", fn: "renderMyInfo()" }
   ];
   if (ME.role === "head") {
     items.push({ id: "users", label: "ผู้ใช้", fn: "renderUsers()" });
@@ -541,9 +532,16 @@ function drawHome() {
   var works = window._works || [];
   var counts = {};
   works.forEach(function (w) { counts[w.status] = (counts[w.status] || 0) + 1; });
-  var quicks = ISSUE_STATUS.concat(PROJECT_STATUS);
-  var html = '<div class="quick">' + quicks.slice(0, 4).map(function (s) {
-    return '<div class="q"><b>' + (counts[s] || 0) + '</b><span>' + esc(s) + '</span></div>';
+  var issueTotal = works.filter(function (w) { return w.kind === KIND_ISSUE; }).length;
+  var quickTiles = [
+    { label: "รอคัดกรอง", val: counts["รอคัดกรอง"] || 0 },
+    { label: "รอรวบรวมข้อมูล", val: counts["รอรวบรวมข้อมูล"] || 0 },
+    { label: "กำลังรวบรวมข้อมูล", val: counts["กำลังรวบรวมข้อมูล"] || 0 },
+    { label: "ทำเป็นโครงการ", val: counts["ทำเป็นโครงการ"] || 0 },
+    { label: "ประเด็นปัญหาทั้งหมด", val: issueTotal }
+  ];
+  var html = '<div class="quick">' + quickTiles.map(function (t) {
+    return '<div class="q"><b>' + t.val + '</b><span>' + esc(t.label) + '</span></div>';
   }).join("") + '</div>';
 
   html += '<div style="display:flex;gap:6px;margin-bottom:10px">' +
@@ -561,7 +559,7 @@ function drawHome() {
     '<select onchange="F_OWNER=this.value;drawHome()"><option value="">ผู้ดูแลทุกคน</option>' +
     owners.map(function (o) { return '<option' + (F_OWNER === o ? " selected" : "") + '>' + esc(o) + '</option>'; }).join("") + '</select>' +
     '<select onchange="F_STATUS=this.value;drawHome()"><option value="">สถานะทั้งหมด</option>' +
-    quicks.map(function (s) { return '<option' + (F_STATUS === s ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select>' +
+    ISSUE_STATUS.concat(PROJECT_STATUS).map(function (s) { return '<option' + (F_STATUS === s ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select>' +
     '<select onchange="F_TAG=this.value;drawHome()"><option value="">แท็กทั้งหมด</option>' +
     allTagsHome.map(function (t) { return '<option' + (F_TAG === t ? " selected" : "") + '>' + esc(t) + '</option>'; }).join("") + '</select></div>';
 
@@ -688,6 +686,7 @@ function createWork(name, kind) {
 function openWork(code) {
   ACTIVE_TAB = 1;
   TAG_PANEL_OPEN = false; TAG_CREATE_OPEN = false;
+  LIST_SELECT = {}; LIST_EDIT_IDX = null;
   app.innerHTML = '<div class="wrap center"><span class="spin"></span></div>';
   Promise.all([
     sb.from("works").select("*").eq("code", code).single(),
@@ -786,13 +785,17 @@ function drawWork() {
       sbody += stageLogs.length ? stageLogs.map(entry).join("") : '<div class="muted">ยังไม่มีบันทึก</div>';
       sbody += '<button type="button" class="btn bg" style="margin-top:7px" onclick="toggleLogForm(' + stage.n + ')">+ เพิ่มบันทึกขั้น ' + stage.n + '</button>' + stageLogForm(stage.n);
     }
+    sbody += '<div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">' +
+      (stage.n > 1 ? '<button type="button" class="btn bg" onclick="setTab(' + (stage.n - 1) + ')">← ขั้นก่อนหน้า</button>' : '<span></span>') +
+      (stage.n < flow2.length ? '<button type="button" class="btn bg" onclick="setTab(' + (stage.n + 1) + ')">ขั้นถัดไป →</button>' : '<span></span>') +
+      '</div>';
     html += '<div class="card">' + sbody + '</div>';
   }
 
   // ไทม์ไลน์ (auto-derived from fields + manual logs)
   var timelineItems = kind === KIND_PROJECT ? buildTimeline() : D.logs.map(logToItem);
   html += sec("timeline", "ไทม์ไลน์", timelineItems.length, false,
-    timelineItems.length ? timelineItems.map(renderTimelineItem).join("") : '<div class="muted">ยังไม่มีความเคลื่อนไหวใดๆ</div>');
+    timelineItems.length ? renderTimelineList(timelineItems) : '<div class="muted">ยังไม่มีความเคลื่อนไหวใดๆ</div>');
 
   if (ME.role === "head") {
     html += sec("audit", "ประวัติการแก้ไข (หัวจ่ายเท่านั้น)", D.history.length, false,
@@ -827,6 +830,7 @@ var AUTO_TITLE = {
   "3|งานย่อยและผู้รับผิดชอบ": "กำหนดงานย่อยและผู้รับผิดชอบ",
   "3|ปัญหาที่พบ": "ปัญหาที่พบ",
   "3|ต้องให้หัวจ่ายช่วยไหม": "ต้องให้หัวจ่ายช่วยไหม",
+  "3|แบบสำรวจระหว่างดำเนินการ": "แนบข้อมูลระหว่างดำเนินการ",
   "4|สิ่งที่ทำไปจริง": "สิ่งที่ทำไปจริง",
   "4|ผลเทียบกับเป้าหมาย": "ผลเทียบกับเป้าหมาย",
   "4|หมายเหตุ": null,
@@ -873,9 +877,21 @@ function fmtDate(ymd) {
   var p = ymd.split("-");
   return p.length === 3 ? (p[2] + "/" + p[1] + "/" + p[0]) : ymd;
 }
-function renderTimelineItem(l) {
-  return '<div class="entry' + (l.contact ? " has-contact" : "") + '">' +
-    (l.stageName ? '<span class="sg">ขั้น ' + l.stage + ' · ' + esc(l.stageName) + '</span>' : "") +
+var STAGE_COLORS = { 1: "#F97316", 2: "#0EA5E9", 3: "#8B5CF6", 4: "#16A34A" };
+function renderTimelineList(items) {
+  var html = "", lastStage;
+  items.forEach(function (it, i) {
+    if (i === 0 || it.stage !== lastStage) {
+      lastStage = it.stage;
+      var col = STAGE_COLORS[it.stage] || "#8A8A94";
+      html += '<div class="tl-stage-h" style="color:' + col + ';border-color:' + col + '">ขั้น ' + (it.stage || "-") + (it.stageName ? (" · " + esc(it.stageName)) : "") + '</div>';
+    }
+    html += renderTimelineItem(it, STAGE_COLORS[it.stage]);
+  });
+  return html;
+}
+function renderTimelineItem(l, color) {
+  return '<div class="entry"' + (color ? ' style="border-left-color:' + color + '"' : "") + '>' +
     '<div class="r1"><span class="ti">' + esc(l.title) + '</span><span class="dt">' + esc(fmtDate(l.date)) + '</span></div>' +
     (l.detail ? '<div class="de">' + esc(l.detail) + '</div>' : "") +
     (l.contact ? '<div class="ct">คุยกับ ' + esc(l.contact) + '</div>' : "") +
@@ -980,15 +996,27 @@ function renderField(stage, fd) {
   }
   if (fd.type === "list") {
     var arr = logEntries(stage, fd.key);
+    var selecting = !!LIST_SELECT[id];
     var rows = arr.map(function (e, i) {
-      return '<div class="entry"><label style="display:flex;align-items:flex-start;gap:6px;margin:0;cursor:pointer">' +
-        '<input type="checkbox" class="lchk" data-id="' + id + '" data-idx="' + i + '" style="width:auto;margin-top:3px">' +
-        '<span style="flex:1"><span class="ti">' + esc(e.text) + '</span> <span class="dt">' + esc(e.date) + '</span></span></label></div>';
+      if (LIST_EDIT_IDX === id + "_" + i) {
+        return '<div class="entry" style="display:flex;gap:6px;align-items:center">' +
+          '<input id="listEditInput" value="' + esc(e.text) + '" style="flex:1" onkeydown="if(event.key==\'Enter\')saveListEdit(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')">' +
+          '<button type="button" class="btn bp" style="padding:8px 12px" onclick="saveListEdit(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')">บันทึก</button>' +
+          '<button type="button" class="btn bg" style="padding:8px 12px" onclick="LIST_EDIT_IDX=null;drawWork()">ยกเลิก</button></div>';
+      }
+      return '<div class="entry" style="display:flex;align-items:flex-start;gap:8px">' +
+        (selecting ? '<input type="checkbox" class="lchk" data-id="' + id + '" data-idx="' + i + '" style="width:auto;margin-top:3px;flex:none">' : "") +
+        '<span style="flex:1"><span class="ti">' + esc(e.text) + '</span> <span class="dt">' + esc(e.date) + '</span></span>' +
+        (selecting ? '<span style="display:flex;gap:10px;flex:none;align-items:center">' +
+          '<b style="cursor:pointer" onclick="LIST_EDIT_IDX=\'' + id + '_' + i + '\';drawWork()" aria-label="แก้ไข">✎</b>' +
+          '<b style="cursor:pointer;color:var(--bad)" onclick="listDelOne(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')" aria-label="ลบ">✕</b></span>' : "") +
+        '</div>';
     }).join("");
     return '<label>' + esc(fd.key) + '</label>' + (rows || '<div class="muted">ยังไม่มีรายการ</div>') +
       '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
       '<button type="button" class="btn bg" onclick="listAdd(' + stage + ',\'' + esc(fd.key) + '\')">+ เพิ่มรายการ</button>' +
-      (arr.length ? '<button type="button" class="btn bd" onclick="listDelSelected(' + stage + ',\'' + esc(fd.key) + '\',\'' + id + '\')">ลบที่เลือก</button>' : "") +
+      '<button type="button" class="btn ' + (selecting ? "bp" : "bg") + '" onclick="toggleListSelect(\'' + id + '\')">เลือก</button>' +
+      (selecting && arr.length ? '<button type="button" class="btn bd" onclick="listDelSelected(' + stage + ',\'' + esc(fd.key) + '\',\'' + id + '\')">ลบที่เลือก</button>' : "") +
       '</div>';
   }
   if (fd.type === "formlink") {
@@ -1028,11 +1056,10 @@ var TAG_CREATE_OPEN = false;
 function tagsEditHtml() {
   var cur = curLinks(0, "นโยบาย");
   return '<div class="tagbox">' +
-    '<div class="tagbox-h">แท็กนโยบาย</div>' +
+    '<div class="tagbox-h"><button type="button" class="tagbox-add" onclick="toggleTagPanel()">+</button> แท็กนโยบาย</div>' +
     '<div id="tagWrap">' + cur.map(function (t) {
       return '<span class="tag"><span>' + esc(t) + '</span> <b onclick="unlink(0,\'นโยบาย\',\'' + esc(t).replace(/'/g, "\\'") + '\')">✕</b></span>';
-    }).join("") +
-    '<button type="button" class="tagbox-add" onclick="toggleTagPanel()">+</button></div>' +
+    }).join("") + '</div>' +
     '<div id="tagPanel"' + (TAG_PANEL_OPEN ? "" : ' class="hidden"') + '>' + tagPanelHtml() + '</div>' +
     '</div>';
 }
@@ -1072,6 +1099,29 @@ function addTag(t) {
 
 /* ---- list-type field (repeatable dated items, multi-select delete with confirm) ---- */
 function logEntries(stage, key) { var v = D.fields[stage + "|" + key] || "[]"; try { return JSON.parse(v) || []; } catch (e) { return []; } }
+var LIST_SELECT = {};
+var LIST_EDIT_IDX = null;
+function toggleListSelect(id) { LIST_SELECT[id] = !LIST_SELECT[id]; LIST_EDIT_IDX = null; drawWork(); }
+function saveListEdit(stage, key, i) {
+  var el = document.getElementById("listEditInput");
+  var t = el ? el.value.trim() : "";
+  if (!t) { LIST_EDIT_IDX = null; drawWork(); return; }
+  var arr = logEntries(stage, key);
+  if (!arr[i]) { LIST_EDIT_IDX = null; drawWork(); return; }
+  arr[i].text = t;
+  D.fields[stage + "|" + key] = JSON.stringify(arr);
+  svf(stage, key, D.fields[stage + "|" + key]);
+  LIST_EDIT_IDX = null;
+  drawWork();
+}
+function listDelOne(stage, key, i) {
+  if (!confirm("ลบรายการนี้? กู้คืนไม่ได้")) return;
+  var arr = logEntries(stage, key);
+  arr.splice(i, 1);
+  D.fields[stage + "|" + key] = JSON.stringify(arr);
+  svf(stage, key, D.fields[stage + "|" + key]);
+  drawWork();
+}
 function listAdd(stage, key) {
   var t = prompt("พิมพ์ข้อความ:");
   if (!t || !t.trim()) return;
@@ -1222,6 +1272,47 @@ function archiveWork() {
   if (!confirm('เก็บ "' + D.work.name + '" เข้าคลัง? (จะไม่โชว์ในหน้าแรก แต่ยังกู้คืนได้จากเมนู "คลัง")')) return;
   sb.from("works").update({ archive: "เก็บเข้าคลัง" }).eq("code", D.work.code)
     .then(function (r) { if (r.error) toast(r.error.message); else { toast("เก็บเข้าคลังแล้ว"); renderHome(); } });
+}
+
+/* ---------------- ข้อมูลของฉัน (ทุกคนเข้าได้) ---------------- */
+function renderMyInfo() {
+  app.innerHTML = shell("myinfo", '<div class="top"><h1>ข้อมูลของฉัน</h1></div>',
+    '<div class="card">' +
+    '<label>อีเมล</label><input value="' + esc(ME.email || "") + '" disabled>' +
+    '<div class="muted" style="margin-top:-6px;margin-bottom:12px">เปลี่ยนอีเมลในแอปนี้ไม่ได้ (ผูกกับระบบยืนยันตัวตนโดยตรง)</div>' +
+    '<label>ชื่อที่แสดง</label><input id="my_name" value="' + esc(ME.name || "") + '">' +
+    '<label>ตำแหน่ง</label><input value="' + (ME.role === "head" ? "หัวจ่าย" : "สมาชิก") + '" disabled>' +
+    '<div class="muted" style="margin-top:-6px;margin-bottom:12px">เปลี่ยนตำแหน่งได้เฉพาะหัวจ่าย ในหน้า "จัดการผู้ใช้"</div>' +
+    '<button class="btn bp" style="margin-top:4px" onclick="saveMyName()">บันทึกชื่อ</button>' +
+    '</div>' +
+    '<div class="card">' +
+    '<div style="font-weight:600;margin-bottom:6px">เปลี่ยนรหัสผ่าน</div>' +
+    '<label>รหัสผ่านใหม่</label><input id="my_pass1" type="password" placeholder="อย่างน้อย 6 ตัวอักษร">' +
+    '<label>ยืนยันรหัสผ่านใหม่</label><input id="my_pass2" type="password">' +
+    '<button class="btn bp" style="margin-top:4px" onclick="saveMyPass()">บันทึกรหัสผ่าน</button>' +
+    '<div id="my_msg" style="margin-top:8px"></div>' +
+    '</div>');
+}
+function saveMyName() {
+  var name = document.getElementById("my_name").value.trim();
+  if (!name) { toast("ชื่อห้ามว่าง"); return; }
+  sb.from("profiles").update({ name: name }).eq("id", ME.id).then(function (r) {
+    if (r.error) { toast(r.error.message); return; }
+    ME.name = name; toast("บันทึกชื่อแล้ว"); renderMyInfo();
+  });
+}
+function saveMyPass() {
+  var p1 = document.getElementById("my_pass1").value;
+  var p2 = document.getElementById("my_pass2").value;
+  var msg = document.getElementById("my_msg");
+  if (!p1 || p1.length < 6) { msg.innerHTML = '<div class="err">รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร</div>'; return; }
+  if (p1 !== p2) { msg.innerHTML = '<div class="err">รหัสผ่านทั้งสองช่องไม่ตรงกัน</div>'; return; }
+  msg.innerHTML = '<span class="spin"></span>';
+  sb.auth.updateUser({ password: p1 }).then(function (r) {
+    if (r.error) { msg.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    msg.innerHTML = '<div class="muted">เปลี่ยนรหัสผ่านแล้ว</div>';
+    document.getElementById("my_pass1").value = ""; document.getElementById("my_pass2").value = "";
+  });
 }
 
 /* ---------------- จัดการแท็ก (ทุกคนเข้าได้) ---------------- */
