@@ -222,6 +222,13 @@ textarea{min-height:64px;resize:vertical;line-height:1.5}
 
 /* -- KPI target/actual rows -- */
 .kpi-row{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
+/* -- policy tag box -- */
+.tagbox{background:var(--canvas);border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 12px;margin:14px 0 8px}
+.tagbox-h{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:8px}
+.tagbox-add{width:28px;height:28px;border-radius:var(--radius-pill);border:1px dashed var(--line);background:transparent;color:var(--ink-mute);font-size:16px;line-height:1;cursor:pointer;vertical-align:middle}
+#tagPanel{margin-top:8px;border-top:1px solid var(--line);padding-top:8px;max-height:220px;overflow-y:auto}
+.tag-panel-item{padding:9px 8px;border-radius:var(--radius-sm);font-size:13.5px;cursor:pointer;color:var(--ink)}
+.tag-panel-item:first-child{color:var(--brand);font-weight:600}
 .kpi-top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink)}
 .kpi-top b{font-weight:700;color:var(--brand)}
 .kpi-bar{height:6px;border-radius:99px;background:var(--line-soft);margin-top:7px;overflow:hidden}
@@ -283,6 +290,8 @@ table.ftbl tr:last-child td{border-bottom:none}
   .radio:hover{border-color:rgba(249,115,22,.35)}
   .tag b:hover{opacity:1}
   .rbtn:hover{background:rgba(20,20,25,.05)}
+  .tag-panel-item:hover{background:var(--brand-wash)}
+  .tagbox-add:hover{border-color:var(--brand);color:var(--brand)}
   .hbtn:hover{border-color:rgba(249,115,22,.35)}
 }
 </style>
@@ -431,7 +440,8 @@ function railHtml(active) {
   var items = [
     { id: "home", label: "หน้าแรก", fn: "renderHome()" },
     { id: "archive", label: "คลัง", fn: "renderArchive()" },
-    { id: "trash", label: "ถังขยะ", fn: "renderTrash()" }
+    { id: "trash", label: "ถังขยะ", fn: "renderTrash()" },
+    { id: "tags", label: "จัดการแท็ก", fn: "renderTags()" }
   ];
   if (ME.role === "head") {
     items.push({ id: "users", label: "ผู้ใช้", fn: "renderUsers()" });
@@ -462,7 +472,7 @@ function closeRail() {
 }
 
 /* ---------------- home ---------------- */
-var F_KIND = "", F_OWNER = "", F_STATUS = "", F_SEARCH = "";
+var F_KIND = "", F_OWNER = "", F_STATUS = "", F_SEARCH = "", F_TAG = "";
 var HOME_VIEW = "card";
 var SELECT_MODE = false;
 var SELECTED = new Set();
@@ -542,13 +552,18 @@ function drawHome() {
     '<button type="button" class="btn ' + (SELECT_MODE ? "bp" : "bg") + '" style="margin-left:auto" onclick="SELECT_MODE=!SELECT_MODE;SELECTED.clear();drawHome()">เลือกหลายรายการ</button></div>';
 
   var owners = Array.from(new Set(works.map(function (w) { return w.owner; }))).sort();
+  var allTagsHome = Array.from(new Set(Object.keys(window._fieldsByCode || {}).reduce(function (acc, code) {
+    return acc.concat(((window._fieldsByCode[code] || {})["0|นโยบาย"] || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean));
+  }, []))).sort();
   html += '<div class="filters">' +
     '<select onchange="F_KIND=this.value;drawHome()"><option value="">ประเภททั้งหมด</option>' +
     [KIND_ISSUE, KIND_PROJECT].map(function (k) { return '<option' + (F_KIND === k ? " selected" : "") + '>' + esc(k) + '</option>'; }).join("") + '</select>' +
     '<select onchange="F_OWNER=this.value;drawHome()"><option value="">ผู้ดูแลทุกคน</option>' +
     owners.map(function (o) { return '<option' + (F_OWNER === o ? " selected" : "") + '>' + esc(o) + '</option>'; }).join("") + '</select>' +
     '<select onchange="F_STATUS=this.value;drawHome()"><option value="">สถานะทั้งหมด</option>' +
-    quicks.map(function (s) { return '<option' + (F_STATUS === s ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select></div>';
+    quicks.map(function (s) { return '<option' + (F_STATUS === s ? " selected" : "") + '>' + esc(s) + '</option>'; }).join("") + '</select>' +
+    '<select onchange="F_TAG=this.value;drawHome()"><option value="">แท็กทั้งหมด</option>' +
+    allTagsHome.map(function (t) { return '<option' + (F_TAG === t ? " selected" : "") + '>' + esc(t) + '</option>'; }).join("") + '</select></div>';
 
   html += '<div style="margin-bottom:9px"><input placeholder="ค้นหาชื่องาน…" value="' + esc(F_SEARCH) + '" oninput="onSearchInput(this.value)"></div>';
   html += '<div style="display:flex;gap:8px;margin-bottom:11px">' +
@@ -561,6 +576,10 @@ function drawHome() {
     if (F_KIND && w.kind !== F_KIND) return false;
     if (F_OWNER && w.owner !== F_OWNER) return false;
     if (F_STATUS && w.status !== F_STATUS) return false;
+    if (F_TAG) {
+      var wtags = ((window._fieldsByCode || {})[w.code] || {})["0|นโยบาย"] || "";
+      if (wtags.split(",").map(function (s) { return s.trim(); }).indexOf(F_TAG) < 0) return false;
+    }
     if (q && w.name.toLowerCase().indexOf(q) < 0 && w.code.toLowerCase().indexOf(q) < 0) return false;
     return true;
   });
@@ -570,8 +589,8 @@ function drawHome() {
     shown.forEach(function (w) {
       var fmap = (window._fieldsByCode || {})[w.code] || {};
       var hb = w.kind === KIND_PROJECT ? healthBadge(w, fmap) : null;
-      html += '<tr style="cursor:pointer" onclick="openWork(\'' + esc(w.code) + '\')">' +
-        '<td onclick="event.stopPropagation()">' + (SELECT_MODE ? '<input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:16px;height:16px;margin:0;cursor:pointer">' : "") + '</td>' +
+      html += '<tr style="cursor:pointer" onclick="cardClick(\'' + esc(w.code) + '\')">' +
+        '<td>' + (SELECT_MODE ? '<input type="checkbox" style="width:16px;height:16px;margin:0;pointer-events:none" ' + (SELECTED.has(w.code) ? "checked" : "") + '>' : "") + '</td>' +
         '<td>' + esc(w.code) + '</td><td style="white-space:normal;min-width:160px">' + esc(w.name) + '</td>' +
         '<td><span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span></td>' +
         '<td>' + esc(w.status || "-") + '</td><td>' + esc(w.owner) + '</td>' +
@@ -590,8 +609,8 @@ function drawHome() {
         progHtml = '<div class="strip">' + flow.map(function (s, i) { return '<i class="' + (i < p.filled ? "on" : "") + '"></i>'; }).join("") + '</div>' +
           '<div class="muted" style="margin-top:4px">' + esc(progressLabel(p, flow)) + '</div>';
       }
-      html += '<div class="card" style="cursor:pointer" onclick="openWork(\'' + esc(w.code) + '\')">' +
-        '<label style="position:absolute;top:13px;left:13px;z-index:2;display:flex" onclick="event.stopPropagation()">' + (SELECT_MODE ? '<input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:18px;height:18px;margin:0;cursor:pointer">' : "") + '</label>' +
+      html += '<div class="card" style="cursor:pointer" onclick="cardClick(\'' + esc(w.code) + '\')">' +
+        (SELECT_MODE ? '<span style="position:absolute;top:13px;left:13px;z-index:2"><input type="checkbox" style="width:18px;height:18px;margin:0;pointer-events:none" ' + (SELECTED.has(w.code) ? "checked" : "") + '></span>' : "") +
         (SELECT_MODE ? '<span class="xdel" onclick="quickTrash(event,\'' + esc(w.code) + '\',\'' + esc(w.name).replace(/'/g, "\\'") + '\')">ลบ</span>' : "") +
         '<div style="padding-left:28px;padding-right:52px">' +
         '<span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span> ' +
@@ -623,6 +642,10 @@ function toggleSelect(code, checked) {
   var y = window.scrollY;
   drawHome();
   window.scrollTo(0, y);
+}
+function cardClick(code) {
+  if (SELECT_MODE) { toggleSelect(code, !SELECTED.has(code)); }
+  else { openWork(code); }
 }
 function clearSelection() { SELECTED.clear(); drawHome(); }
 function bulkMove(dest) {
@@ -664,6 +687,7 @@ function createWork(name, kind) {
 /* ---------------- work detail ---------------- */
 function openWork(code) {
   ACTIVE_TAB = 1;
+  TAG_PANEL_OPEN = false; TAG_CREATE_OPEN = false;
   app.innerHTML = '<div class="wrap center"><span class="spin"></span></div>';
   Promise.all([
     sb.from("works").select("*").eq("code", code).single(),
@@ -705,7 +729,7 @@ function drawWork() {
     var flow = FLOW[KIND_PROJECT], filled = flow.filter(stageFilled).length;
     infoBody += '<div class="strip">' + flow.map(function (s, i) { return '<i class="' + (i < filled ? "on" : "") + '"></i>'; }).join("") + '</div>';
   }
-  infoBody += '<label>แท็กนโยบาย</label>' + tagsEditHtml();
+  infoBody += tagsEditHtml();
   infoBody += '<label>ตัวชี้วัด KPI</label>' + kpiRowsHtml() +
     '<div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">' +
     '<button type="button" class="btn bg" onclick="addKpi(\'number\')">+ เพิ่มตัวชี้วัด (ตัวเลข)</button>' +
@@ -998,28 +1022,51 @@ function curLinks(stage, key) { var v = D.fields[stage + "|" + key] || ""; retur
 function link_(stage, key, code) { var arr = curLinks(stage, key); if (arr.indexOf(code) < 0) arr.push(code); D.fields[stage + "|" + key] = arr.join(", "); svf(stage, key, arr.join(", ")); drawWork(); }
 function unlink(stage, key, code) { var arr = curLinks(stage, key).filter(function (c) { return c !== code; }); D.fields[stage + "|" + key] = arr.join(", "); svf(stage, key, arr.join(", ")); drawWork(); }
 
-/* ---- policy tags (free-vocabulary, autocomplete against tags used elsewhere in the system) ---- */
+/* ---- policy tags (gray box + "+" panel: create-new on top, pick-existing below) ---- */
+var TAG_PANEL_OPEN = false;
+var TAG_CREATE_OPEN = false;
 function tagsEditHtml() {
   var cur = curLinks(0, "นโยบาย");
-  return '<div id="tagWrap">' + cur.map(function (t) {
-    return '<span class="tag"><span>' + esc(t) + '</span> <b onclick="unlink(0,\'นโยบาย\',\'' + esc(t).replace(/'/g, "\\'") + '\')">✕</b></span>';
-  }).join("") + '</div>' +
-    '<input id="tagInput" placeholder="พิมพ์ค้นหาหรือพิมพ์แท็กใหม่…" oninput="tagSuggest(this)" style="margin-top:6px"><div id="tag_sug"></div>';
+  return '<div class="tagbox">' +
+    '<div class="tagbox-h">แท็กนโยบาย</div>' +
+    '<div id="tagWrap">' + cur.map(function (t) {
+      return '<span class="tag"><span>' + esc(t) + '</span> <b onclick="unlink(0,\'นโยบาย\',\'' + esc(t).replace(/'/g, "\\'") + '\')">✕</b></span>';
+    }).join("") +
+    '<button type="button" class="tagbox-add" onclick="toggleTagPanel()">+</button></div>' +
+    '<div id="tagPanel"' + (TAG_PANEL_OPEN ? "" : ' class="hidden"') + '>' + tagPanelHtml() + '</div>' +
+    '</div>';
 }
-function tagSuggest(inp) {
-  var q = inp.value.trim(), ql = q.toLowerCase();
-  var box = document.getElementById("tag_sug");
+function tagPanelHtml() {
   var cur = curLinks(0, "นโยบาย");
-  if (!q) { box.innerHTML = ""; return; }
-  var hits = (D.allTags || []).filter(function (t) { return t.toLowerCase().indexOf(ql) >= 0 && cur.indexOf(t) < 0; }).slice(0, 6);
-  var html = hits.length ? '<div class="sug">' + hits.map(function (t) { return '<div onclick="addTag(\'' + esc(t).replace(/'/g, "\\'") + '\')">' + esc(t) + '</div>'; }).join("") + '</div>' : "";
-  var exact = (D.allTags || []).some(function (t) { return t.toLowerCase() === ql; }) || cur.some(function (t) { return t.toLowerCase() === ql; });
-  if (!exact) html += '<div class="muted" style="margin-top:5px;cursor:pointer" onclick="addTag(\'' + esc(q).replace(/'/g, "\\'") + '\')">+ เพิ่มแท็กใหม่ "' + esc(q) + '"</div>';
-  box.innerHTML = html;
+  var others = (D.allTags || []).filter(function (t) { return cur.indexOf(t) < 0; });
+  var html = '<div class="tag-panel-item" onclick="toggleTagCreate()">+ สร้างแท็กใหม่</div>';
+  if (TAG_CREATE_OPEN) {
+    html += '<div style="display:flex;gap:6px;padding:8px 4px"><input id="newTagInput" placeholder="ชื่อแท็กใหม่" style="flex:1" onkeydown="if(event.key==\'Enter\')saveNewTag()"><button type="button" class="btn bp" style="padding:8px 12px" onclick="saveNewTag()">บันทึก</button></div>';
+  }
+  if (others.length) {
+    html += others.map(function (t) { return '<div class="tag-panel-item" onclick="addTag(\'' + esc(t).replace(/'/g, "\\'") + '\')">' + esc(t) + '</div>'; }).join("");
+  } else if (!TAG_CREATE_OPEN) {
+    html += '<div class="muted" style="padding:8px 4px">ยังไม่มีแท็กอื่นในระบบ</div>';
+  }
+  return html;
+}
+function toggleTagPanel() { TAG_PANEL_OPEN = !TAG_PANEL_OPEN; TAG_CREATE_OPEN = false; drawWork(); }
+function toggleTagCreate() {
+  TAG_CREATE_OPEN = !TAG_CREATE_OPEN;
+  document.getElementById("tagPanel").innerHTML = tagPanelHtml();
+  if (TAG_CREATE_OPEN) { var el = document.getElementById("newTagInput"); if (el) el.focus(); }
+}
+function saveNewTag() {
+  var el = document.getElementById("newTagInput");
+  var t = el ? el.value.trim() : "";
+  if (!t) return;
+  TAG_CREATE_OPEN = false; TAG_PANEL_OPEN = false;
+  addTag(t);
 }
 function addTag(t) {
   t = t.trim(); if (!t) return;
   if ((D.allTags || []).indexOf(t) < 0) { D.allTags = (D.allTags || []).concat([t]).sort(); }
+  TAG_PANEL_OPEN = false; TAG_CREATE_OPEN = false;
   link_(0, "นโยบาย", t);
 }
 
@@ -1175,6 +1222,77 @@ function archiveWork() {
   if (!confirm('เก็บ "' + D.work.name + '" เข้าคลัง? (จะไม่โชว์ในหน้าแรก แต่ยังกู้คืนได้จากเมนู "คลัง")')) return;
   sb.from("works").update({ archive: "เก็บเข้าคลัง" }).eq("code", D.work.code)
     .then(function (r) { if (r.error) toast(r.error.message); else { toast("เก็บเข้าคลังแล้ว"); renderHome(); } });
+}
+
+/* ---------------- จัดการแท็ก (ทุกคนเข้าได้) ---------------- */
+function renderTags() {
+  app.innerHTML = shell("tags", '<div class="top"><h1>จัดการแท็ก</h1></div>', '<div id="tagsBody" class="center"><span class="spin"></span></div>');
+  TAG_EDITING = null;
+  sb.from("fields").select("code,value").eq("stage", 0).eq("key", "นโยบาย").then(function (r) {
+    var box = document.getElementById("tagsBody");
+    if (r.error) { box.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    window._tagRows = (r.data || []).filter(function (row) { return row.value && row.value.trim(); });
+    drawTags();
+  });
+}
+function allTagNamesGlobal() {
+  var set = {};
+  (window._tagRows || []).forEach(function (row) { row.value.split(",").forEach(function (t) { t = t.trim(); if (t) set[t] = true; }); });
+  return Object.keys(set).sort();
+}
+var TAG_EDITING = null;
+function drawTags() {
+  var tags = allTagNamesGlobal();
+  var box = document.getElementById("tagsBody");
+  if (!tags.length) { box.innerHTML = '<div class="center">ยังไม่มีแท็กในระบบ — ไปเพิ่มแท็กได้จากหน้ารายละเอียดงาน</div>'; return; }
+  box.innerHTML = tags.map(function (t) {
+    var count = (window._tagRows || []).filter(function (row) { return row.value.split(",").map(function (s) { return s.trim(); }).indexOf(t) >= 0; }).length;
+    var tEsc = esc(t).replace(/'/g, "\\'");
+    if (TAG_EDITING === t) {
+      return '<div class="card" style="display:flex;gap:8px;align-items:center">' +
+        '<input id="tagEditInput" value="' + esc(t) + '" style="flex:1" onkeydown="if(event.key==\'Enter\')saveTagRename(\'' + tEsc + '\')">' +
+        '<button type="button" class="btn bp" style="padding:9px 14px" onclick="saveTagRename(\'' + tEsc + '\')">บันทึก</button>' +
+        '<button type="button" class="btn bg" style="padding:9px 14px" onclick="TAG_EDITING=null;drawTags()">ยกเลิก</button></div>';
+    }
+    return '<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '<div><span class="chip">' + esc(t) + '</span> <span class="muted">ใช้อยู่ ' + count + ' งาน</span></div>' +
+      '<div style="display:flex;gap:6px">' +
+      '<button type="button" class="btn bg" style="padding:8px 12px" onclick="TAG_EDITING=\'' + tEsc + '\';drawTags()" aria-label="แก้ไข">✎</button>' +
+      '<button type="button" class="btn bd" style="padding:8px 12px" onclick="deleteTagEverywhere(\'' + tEsc + '\')" aria-label="ลบ">✕</button>' +
+      '</div></div>';
+  }).join("");
+  var el = document.getElementById("tagEditInput"); if (el) { el.focus(); el.select(); }
+}
+function saveTagRename(oldName) {
+  var el = document.getElementById("tagEditInput");
+  var newName = el ? el.value.trim() : "";
+  if (!newName || newName === oldName) { TAG_EDITING = null; drawTags(); return; }
+  var rows = (window._tagRows || []).filter(function (row) { return row.value.split(",").map(function (s) { return s.trim(); }).indexOf(oldName) >= 0; });
+  var updates = rows.map(function (row) {
+    var arr = row.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+    var idx = arr.indexOf(oldName);
+    if (idx >= 0) { if (arr.indexOf(newName) < 0) arr[idx] = newName; else arr.splice(idx, 1); }
+    row.value = arr.join(", ");
+    return sb.from("fields").update({ value: row.value, updated_at: new Date().toISOString() }).eq("code", row.code).eq("stage", 0).eq("key", "นโยบาย");
+  });
+  Promise.all(updates).then(function (results) {
+    var err = results.filter(function (r) { return r && r.error; })[0];
+    if (err) toast(err.error.message); else toast("เปลี่ยนชื่อแท็กแล้ว");
+    TAG_EDITING = null; drawTags();
+  });
+}
+function deleteTagEverywhere(t) {
+  if (!confirm('ลบแท็ก "' + t + '" ออกจากทุกงานที่มี? (แท็กอื่นของงานเดียวกันจะยังอยู่)')) return;
+  var rows = (window._tagRows || []).filter(function (row) { return row.value.split(",").map(function (s) { return s.trim(); }).indexOf(t) >= 0; });
+  var updates = rows.map(function (row) {
+    row.value = row.value.split(",").map(function (s) { return s.trim(); }).filter(Boolean).filter(function (x) { return x !== t; }).join(", ");
+    return sb.from("fields").update({ value: row.value, updated_at: new Date().toISOString() }).eq("code", row.code).eq("stage", 0).eq("key", "นโยบาย");
+  });
+  Promise.all(updates).then(function (results) {
+    var err = results.filter(function (r) { return r && r.error; })[0];
+    if (err) toast(err.error.message); else toast("ลบแท็กแล้ว");
+    drawTags();
+  });
 }
 
 /* ---------------- คลัง ---------------- */
