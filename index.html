@@ -646,11 +646,15 @@ function openWork(code) {
     sb.from("works").select("*").eq("code", code).single(),
     sb.from("fields").select("*").eq("code", code),
     sb.from("logs").select("*").eq("code", code).order("log_date", { ascending: false }),
-    sb.from("works").select("code,name").neq("code", code).neq("archive", "ถังขยะ")
+    sb.from("works").select("code,name").neq("code", code).neq("archive", "ถังขยะ"),
+    sb.from("fields").select("value").eq("stage", 0).eq("key", "นโยบาย")
   ]).then(function (rs) {
     if (rs[0].error) { app.innerHTML = '<div class="wrap"><div class="err">' + esc(rs[0].error.message) + '</div></div>'; return; }
     D = { work: rs[0].data, fields: {}, fieldMeta: {}, logs: rs[2].data || [], others: rs[3].data || [] };
     (rs[1].data || []).forEach(function (f) { D.fields[f.stage + "|" + f.key] = f.value; D.fieldMeta[f.stage + "|" + f.key] = f.updated_at; });
+    var tagSet = {};
+    (rs[4].data || []).forEach(function (r) { (r.value || "").split(",").forEach(function (t) { t = t.trim(); if (t) tagSet[t] = true; }); });
+    D.allTags = Object.keys(tagSet).sort();
     drawWork();
   });
 }
@@ -789,7 +793,11 @@ function buildTimeline() {
     });
   });
   D.logs.forEach(function (l) { out.push(logToItem(l)); });
-  out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
+  out.sort(function (a, b) {
+    var sa = a.stage || 0, sb2 = b.stage || 0;
+    if (sa !== sb2) return sa - sb2;
+    return (a.date || "").localeCompare(b.date || "");
+  });
   return out;
 }
 function logToItem(l) {
