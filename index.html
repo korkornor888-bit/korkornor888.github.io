@@ -356,7 +356,7 @@ FLOW[KIND_PROJECT] = [
     fields:[
       { key:"สิ่งที่ทำไปจริง", type:"textarea" }, { key:"ผลเทียบกับเป้าหมาย", type:"textarea" },
       { key:"หมายเหตุ", type:"textarea" },
-      { key:"ข้อเสนอขั้นต่อไป", type:"choice", opts:["ยังไม่สรุป","ทำต่อ","ปรับแล้วทำใหม่","ขยายผล","ยุติ"] },
+      { key:"ข้อเสนอขั้นต่อไป", type:"choice", opts:["ยังไม่สรุป","ทำต่อ","ปรับแล้วทำใหม่","ขยายผล","เสร็จสิ้น"] },
       { key:"แบบสำรวจหลังดำเนินการ", type:"formlink" } ] }
 ];
 
@@ -1030,10 +1030,41 @@ function renderField(stage, fd) {
   return '<label>' + esc(fd.label || fd.key) + '</label><input id="' + id + '" value="' + esc(val) + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">';
 }
 function key2id(k) { return k.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
+
+/* -- choice fields that drive the work's overall status automatically -- */
+var STATUS_AUTO = {
+  "2|ผลการตัดสินใจ": {
+    "ผ่าน": "กำลังดำเนินการ",
+    "ผ่านแบบมีเงื่อนไข": "กำลังดำเนินการ",
+    "ต้องปรับแล้วเสนอใหม่": "รอการตัดสินใจ",
+    "ไม่อนุมัติ": "ไม่สำเร็จ"
+  },
+  "3|ต้องให้หัวจ่ายช่วยไหม": {
+    "ต้องการให้ช่วย": "ติดขัด/มีปัญหา"
+  },
+  "4|ข้อเสนอขั้นต่อไป": {
+    "ทำต่อ": "กำลังดำเนินการ",
+    "ปรับแล้วทำใหม่": "กำลังดำเนินการ",
+    "ขยายผล": "กำลังดำเนินการ",
+    "เสร็จสิ้น": "เสร็จสิ้น"
+  }
+};
+function applyStatusAuto(stage, key, val) {
+  if (D.work.kind !== KIND_PROJECT) return;
+  var mapKey = stage + "|" + key;
+  if (mapKey === "3|ต้องให้หัวจ่ายช่วยไหม" && val === "ไม่ต้อง") {
+    if (D.work.status === "ติดขัด/มีปัญหา") updateWork("status", "กำลังดำเนินการ");
+    return;
+  }
+  var m = STATUS_AUTO[mapKey];
+  var newStatus = m && m[val];
+  if (newStatus && newStatus !== D.work.status) updateWork("status", newStatus);
+}
 function pick(el, stage, key, val) {
   var p = el.parentNode;
   for (var i = 0; i < p.children.length; i++) p.children[i].classList.remove("on");
   el.classList.add("on"); svf(stage, key, val);
+  applyStatusAuto(stage, key, val);
 }
 function svf(stage, key, val) {
   sb.from("fields").upsert({ code: D.work.code, stage: stage, key: key, value: val, updated_at: new Date().toISOString() }, { onConflict: "code,stage,key" })
@@ -1241,6 +1272,7 @@ function updateWork(field, value) {
   sb.from("works").update(patch).eq("code", D.work.code).then(function (r) {
     if (r.error) return toast(r.error.message);
     D.work[field] = value; toast("บันทึกแล้ว");
+    if (field === "status") drawWork();
   });
 }
 function convertToProject() {
