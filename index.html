@@ -235,11 +235,11 @@ textarea{min-height:64px;resize:vertical;line-height:1.5}
   position:sticky;top:0;align-self:flex-start;height:100vh;height:100dvh;overflow-y:auto;
 }
 .rbtn{
-  width:56px;padding:8px 2px 7px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:9.5px;font-weight:600;color:var(--ink-mute);cursor:pointer;background:transparent;border:none;font-family:inherit;
-  transition:background-color .12s ease,color .12s ease;
+  width:64px;padding:10px 4px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:10px;font-weight:600;color:var(--ink-mute);cursor:pointer;background:transparent;border:none;font-family:inherit;
+  transition:background-color .12s ease,color .12s ease;line-height:1.3;text-align:center;
 }
-.rbtn .ric{font-size:18px;line-height:1}
+.rbtn span{overflow-wrap:break-word}
 .rbtn.on{background:var(--brand-wash);color:var(--brand)}
 .rbtn:active{transform:scale(.94)}
 .content{flex:1;min-width:0}
@@ -331,13 +331,13 @@ FLOW[KIND_PROJECT] = [
     fields:[
       { key:"ผลคุยกับตัวแทน/คนในฝ่าย", type:"textarea" }, { key:"ผลคุยกับครู/ผู้มีอำนาจ", type:"textarea" },
       { key:"ผลการตัดสินใจ", type:"choice", opts:["ยังไม่ตัดสินใจ","ผ่าน","ผ่านแบบมีเงื่อนไข","ต้องปรับแล้วเสนอใหม่","ไม่อนุมัติ"] },
-      { key:"สิ่งที่ต้องปรับตามความเห็น", type:"textarea" },
+      { key:"สิ่งที่ต้องปรับตามความเห็น", type:"textarea", label:"หมายเหตุ" },
       { key:"แบบสำรวจก่อนดำเนินการ", type:"formlink" } ] },
-  { n:3, name:"ดำเนินการและติดตาม", hint:"แตกงานย่อย มอบหมาย แล้วติดตามจนเสร็จ", done:"งานเดินตามแผน",
+  { n:3, name:"ดำเนินการและติดตาม", hint:"แตกงานย่อย มอบหมาย แล้วติดตามจนเสร็จ", done:"งานเดินตามแผน", noLog:true,
     fields:[
       { key:"งานย่อยและผู้รับผิดชอบ", type:"textarea" }, { key:"ความคืบหน้าตอนนี้", type:"list" },
       { key:"ปัญหาที่พบ", type:"textarea" }, { key:"ต้องให้หัวจ่ายช่วยไหม", type:"choice", opts:["ไม่ต้อง","ต้องการให้ช่วย"] } ] },
-  { n:4, name:"ประเมินผลและสรุป", hint:"เทียบผลจริงกับเป้าหมาย แล้วสรุปบทเรียน", done:"ปิดโครงการพร้อมบทเรียนและข้อเสนอ", cmp:true,
+  { n:4, name:"ประเมินผลและสรุป", hint:"เทียบผลจริงกับเป้าหมาย แล้วสรุปบทเรียน", done:"ปิดโครงการพร้อมบทเรียนและข้อเสนอ", cmp:true, noLog:true,
     fields:[
       { key:"สิ่งที่ทำไปจริง", type:"textarea" }, { key:"ผลเทียบกับเป้าหมาย", type:"textarea" },
       { key:"หมายเหตุ", type:"textarea" },
@@ -426,14 +426,14 @@ function logout() { sb.auth.signOut(); }
 /* ---------------- app shell / icon rail ---------------- */
 function railHtml(active) {
   var items = [
-    { id: "home", label: "หน้าแรก", ic: "⌂", fn: "renderHome()" },
-    { id: "archive", label: "คลัง", ic: "▤", fn: "renderArchive()" },
-    { id: "trash", label: "ถังขยะ", ic: "🗑", fn: "renderTrash()" }
+    { id: "home", label: "หน้าแรก", fn: "renderHome()" },
+    { id: "archive", label: "คลัง", fn: "renderArchive()" },
+    { id: "trash", label: "ถังขยะ", fn: "renderTrash()" }
   ];
-  if (ME.role === "head") items.push({ id: "users", label: "ผู้ใช้", ic: "👤", fn: "renderUsers()" });
-  items.push({ id: "logout", label: "ออก", ic: "⏻", fn: "logout()" });
+  if (ME.role === "head") items.push({ id: "users", label: "ผู้ใช้", fn: "renderUsers()" });
+  items.push({ id: "logout", label: "ออกจากระบบ", fn: "logout()" });
   return '<div class="rail">' + items.map(function (it) {
-    return '<button type="button" class="rbtn' + (active === it.id ? " on" : "") + '" onclick="' + it.fn + '"><span class="ric">' + it.ic + '</span><span>' + it.label + '</span></button>';
+    return '<button type="button" class="rbtn' + (active === it.id ? " on" : "") + '" onclick="' + it.fn + '"><span>' + it.label + '</span></button>';
   }).join("") + '</div>';
 }
 function shell(active, topHtml, bodyHtml) {
@@ -443,9 +443,11 @@ function shell(active, topHtml, bodyHtml) {
 /* ---------------- home ---------------- */
 var F_KIND = "", F_OWNER = "", F_STATUS = "", F_SEARCH = "";
 var HOME_VIEW = "card";
+var SELECT_MODE = false;
 var SELECTED = new Set();
 function renderHome() {
   SELECTED.clear();
+  SELECT_MODE = false;
   app.innerHTML = shell("home",
     '<div class="top"><div><h1>ระบบจัดการงาน</h1><div class="who">' + esc(ME.name) + ' · ' + (ME.role === "head" ? "หัวจ่าย" : "สมาชิก") + '</div></div></div>',
     '<div id="list" class="center"><span class="spin"></span></div>');
@@ -471,7 +473,8 @@ function isStale(w) { return (Date.now() - new Date(w.updated_at).getTime()) > S
 function kpiListOf(fmap) { try { return JSON.parse((fmap || {})["0|KPI_LIST"] || "[]") || []; } catch (e) { return []; } }
 function healthBadge(w, fmap) {
   var problem = ((fmap || {})["3|ปัญหาที่พบ"] || "").trim();
-  if (problem || w.status === "ติดขัด/มีปัญหา") return { cls: "bad", label: "Off Track" };
+  var rejected = (fmap || {})["2|ผลการตัดสินใจ"] === "ไม่อนุมัติ";
+  if (problem || rejected || w.status === "ติดขัด/มีปัญหา") return { cls: "bad", label: "Off Track" };
   if (isStale(w)) return { cls: "risk", label: "At Risk" };
   return { cls: "good", label: "On Track" };
 }
@@ -511,8 +514,9 @@ function drawHome() {
   }).join("") + '<div class="q"><b>' + kagg.pct + '%</b><span>KPI รวมทุกโครงการ</span></div></div>';
 
   html += '<div style="display:flex;gap:6px;margin-bottom:10px">' +
-    '<button type="button" class="btn ' + (HOME_VIEW === "card" ? "bp" : "bg") + '" onclick="HOME_VIEW=\'card\';drawHome()">🗂 การ์ด</button>' +
-    '<button type="button" class="btn ' + (HOME_VIEW === "table" ? "bp" : "bg") + '" onclick="HOME_VIEW=\'table\';drawHome()">☰ ตาราง</button></div>';
+    '<button type="button" class="btn ' + (HOME_VIEW === "card" ? "bp" : "bg") + '" onclick="HOME_VIEW=\'card\';drawHome()">การ์ด</button>' +
+    '<button type="button" class="btn ' + (HOME_VIEW === "table" ? "bp" : "bg") + '" onclick="HOME_VIEW=\'table\';drawHome()">ตาราง</button>' +
+    '<button type="button" class="btn ' + (SELECT_MODE ? "bp" : "bg") + '" style="margin-left:auto" onclick="SELECT_MODE=!SELECT_MODE;SELECTED.clear();drawHome()">เลือกหลายรายการ</button></div>';
 
   var owners = Array.from(new Set(works.map(function (w) { return w.owner; }))).sort();
   html += '<div class="filters">' +
@@ -544,7 +548,7 @@ function drawHome() {
       var fmap = (window._fieldsByCode || {})[w.code] || {};
       var hb = w.kind === KIND_PROJECT ? healthBadge(w, fmap) : null;
       html += '<tr style="cursor:pointer" onclick="openWork(\'' + esc(w.code) + '\')">' +
-        '<td onclick="event.stopPropagation()"><input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:16px;height:16px;margin:0;cursor:pointer"></td>' +
+        '<td onclick="event.stopPropagation()">' + (SELECT_MODE ? '<input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:16px;height:16px;margin:0;cursor:pointer">' : "") + '</td>' +
         '<td>' + esc(w.code) + '</td><td style="white-space:normal;min-width:160px">' + esc(w.name) + '</td>' +
         '<td><span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span></td>' +
         '<td>' + esc(w.status || "-") + '</td><td>' + esc(w.owner) + '</td>' +
@@ -564,13 +568,13 @@ function drawHome() {
           '<div class="muted" style="margin-top:4px">' + esc(progressLabel(p, flow)) + '</div>';
       }
       html += '<div class="card" style="cursor:pointer" onclick="openWork(\'' + esc(w.code) + '\')">' +
-        '<label style="position:absolute;top:13px;left:13px;z-index:2;display:flex" onclick="event.stopPropagation()"><input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:18px;height:18px;margin:0;cursor:pointer"></label>' +
+        '<label style="position:absolute;top:13px;left:13px;z-index:2;display:flex" onclick="event.stopPropagation()">' + (SELECT_MODE ? '<input type="checkbox" onclick="toggleSelect(\'' + esc(w.code) + '\',this.checked)" ' + (SELECTED.has(w.code) ? "checked" : "") + ' style="width:18px;height:18px;margin:0;cursor:pointer">' : "") + '</label>' +
         '<span class="xdel" onclick="quickTrash(event,\'' + esc(w.code) + '\',\'' + esc(w.name).replace(/'/g, "\\'") + '\')">ลบ</span>' +
         '<div style="padding-left:28px;padding-right:52px">' +
         '<span class="kind ' + (w.kind === KIND_ISSUE ? "k-i" : "k-p") + '">' + esc(w.kind) + '</span> ' +
         '<span class="chip">' + esc(w.code) + '</span>' +
         (hb ? '<span class="hbadge hb-' + hb.cls + '">' + hb.label + '</span>' : "") + ' ' +
-        (stuck ? '<span class="stale">⚠ ' + esc(w.status) + '</span>' : "") +
+        (stuck ? '<span class="stale">' + esc(w.status) + '</span>' : "") +
         (isStale(w) ? '<span class="stale">ไม่เคลื่อนไหว 14 วัน+</span>' : "") +
         '<div style="font-weight:600;margin-top:5px">' + esc(w.name) + '</div>' +
         '<div class="muted" style="margin-top:3px">' + esc(w.status || "-") + ' · ผู้รับผิดชอบ ' + esc(w.owner) + '</div>' +
@@ -645,8 +649,8 @@ function openWork(code) {
     sb.from("works").select("code,name").neq("code", code).neq("archive", "ถังขยะ")
   ]).then(function (rs) {
     if (rs[0].error) { app.innerHTML = '<div class="wrap"><div class="err">' + esc(rs[0].error.message) + '</div></div>'; return; }
-    D = { work: rs[0].data, fields: {}, logs: rs[2].data || [], others: rs[3].data || [] };
-    (rs[1].data || []).forEach(function (f) { D.fields[f.stage + "|" + f.key] = f.value; });
+    D = { work: rs[0].data, fields: {}, fieldMeta: {}, logs: rs[2].data || [], others: rs[3].data || [] };
+    (rs[1].data || []).forEach(function (f) { D.fields[f.stage + "|" + f.key] = f.value; D.fieldMeta[f.stage + "|" + f.key] = f.updated_at; });
     drawWork();
   });
 }
@@ -730,15 +734,85 @@ function drawWork() {
     html += '<div class="card">' + sbody + '</div>';
   }
 
-  // ผลการประสานงาน + ไทม์ไลน์
-  var contactLogs = D.logs.filter(function (l) { return l.contact; });
-  html += sec("contact", "ผลการประสานงาน", contactLogs.length, false,
-    contactLogs.length ? contactLogs.map(entryWithStage).join("") : '<div class="muted">ยังไม่มี — บันทึกที่กรอกช่อง "คุยกับใคร" จะมาโผล่ที่นี่</div>');
-  html += sec("timeline", "ไทม์ไลน์", D.logs.length, false,
-    D.logs.length ? D.logs.map(entryWithStage).join("") : '<div class="muted">ยังไม่มีบันทึกใดๆ</div>');
+  // ไทม์ไลน์ (auto-derived from fields + manual logs)
+  var timelineItems = kind === KIND_PROJECT ? buildTimeline() : D.logs.map(logToItem);
+  html += sec("timeline", "ไทม์ไลน์", timelineItems.length, false,
+    timelineItems.length ? timelineItems.map(renderTimelineItem).join("") : '<div class="muted">ยังไม่มีความเคลื่อนไหวใดๆ</div>');
 
   html += '</div></div></div>';
   app.innerHTML = html;
+}
+var LIST_ORDINAL = ["", "", "ที่สอง", "ที่สาม", "ที่สี่", "ที่ห้า", "ที่หก", "ที่เจ็ด", "ที่แปด", "ที่เก้า", "ที่สิบ"];
+function ordinalTitle(base, idx) {
+  if (idx === 0) return base;
+  return base + (LIST_ORDINAL[idx + 1] || ("ที่ " + (idx + 1)));
+}
+var AUTO_TITLE = {
+  "1|ผลลัพธ์ที่ต้องการ": "ผลลัพธ์ที่ต้องการ",
+  "1|แนวทางที่เลือก": "เลือกทางเลือกที่จะใช้",
+  "1|ทรัพยากรที่ต้องใช้": "ทรัพยากรที่ต้องใช้",
+  "1|ตัวชี้วัด": "กำหนด KPI",
+  "1|หมายเหตุ": null,
+  "2|ผลคุยกับตัวแทน/คนในฝ่าย": "เสนอตัวแทนนักเรียน",
+  "2|ผลคุยกับครู/ผู้มีอำนาจ": "เสนอครู",
+  "2|ผลการตัดสินใจ": "ผลการเสนอ",
+  "2|สิ่งที่ต้องปรับตามความเห็น": "พิจารณาปรับแก้",
+  "2|แบบสำรวจก่อนดำเนินการ": "เริ่มรวบรวมข้อมูล",
+  "3|งานย่อยและผู้รับผิดชอบ": "กำหนดงานย่อยและผู้รับผิดชอบ",
+  "3|ปัญหาที่พบ": "ปัญหาที่พบ",
+  "3|ต้องให้หัวจ่ายช่วยไหม": "ต้องให้หัวจ่ายช่วยไหม",
+  "4|สิ่งที่ทำไปจริง": "สิ่งที่ทำไปจริง",
+  "4|ผลเทียบกับเป้าหมาย": "ผลเทียบกับเป้าหมาย",
+  "4|หมายเหตุ": null,
+  "4|ข้อเสนอขั้นต่อไป": "ข้อเสนอขั้นต่อไป",
+  "4|แบบสำรวจหลังดำเนินการ": "ประเมินผลหลังดำเนินการ"
+};
+function buildTimeline() {
+  var out = [];
+  FLOW[KIND_PROJECT].forEach(function (stage) {
+    stage.fields.forEach(function (fd) {
+      var mapKey = stage.n + "|" + fd.key;
+      if (fd.type === "list") {
+        var arr = logEntries(stage.n, fd.key);
+        arr.forEach(function (item, idx) {
+          var title = fd.key === "ทางเลือกที่พิจารณา" ? ordinalTitle("เสนอทางเลือก", idx) :
+            (fd.key === "ความคืบหน้าตอนนี้" ? "ความคืบหน้า" : fd.key);
+          out.push({ stage: stage.n, stageName: stage.name, title: title, detail: item.text, date: item.date, real: false });
+        });
+        return;
+      }
+      if (AUTO_TITLE[mapKey] === null) return;
+      var val = D.fields[mapKey] || "";
+      if (!val || !String(val).trim()) return;
+      out.push({ stage: stage.n, stageName: stage.name, title: AUTO_TITLE[mapKey] || fd.key, detail: val,
+        date: ((D.fieldMeta || {})[mapKey] || "").slice(0, 10), real: false });
+    });
+  });
+  D.logs.forEach(function (l) { out.push(logToItem(l)); });
+  out.sort(function (a, b) { return (b.date || "").localeCompare(a.date || ""); });
+  return out;
+}
+function logToItem(l) {
+  var stName = "";
+  if (l.stage) { FLOW[KIND_PROJECT].forEach(function (s) { if (s.n === l.stage) stName = s.name; }); }
+  return { stage: l.stage, stageName: stName, title: l.title, detail: l.detail, contact: l.contact, link: l.link,
+    person: l.person, date: (l.log_date || "").slice(0, 10), real: true, id: l.id };
+}
+function fmtDate(ymd) {
+  if (!ymd) return "-";
+  var p = ymd.split("-");
+  return p.length === 3 ? (p[2] + "/" + p[1] + "/" + p[0]) : ymd;
+}
+function renderTimelineItem(l) {
+  return '<div class="entry' + (l.contact ? " has-contact" : "") + '">' +
+    (l.stageName ? '<span class="sg">ขั้น ' + l.stage + ' · ' + esc(l.stageName) + '</span>' : "") +
+    '<div class="r1"><span class="ti">' + esc(l.title) + '</span><span class="dt">' + esc(fmtDate(l.date)) + '</span></div>' +
+    (l.detail ? '<div class="de">' + esc(l.detail) + '</div>' : "") +
+    (l.contact ? '<div class="ct">คุยกับ ' + esc(l.contact) + '</div>' : "") +
+    (l.link ? '<div style="margin-top:3px"><a href="' + esc(l.link) + '" target="_blank" style="font-size:12px">เปิดลิงก์</a></div>' : "") +
+    (l.real ? '<div style="display:flex;justify-content:space-between;margin-top:3px"><span class="muted">โดย ' + esc(l.person || "-") + '</span>' +
+      '<span class="muted" style="cursor:pointer;color:var(--bad)" onclick="delLog(' + l.id + ')">ลบ</span></div>' : "") +
+    '</div>';
 }
 function kpiList() { try { return JSON.parse(D.fields["0|KPI_LIST"] || "[]") || []; } catch (e) { return []; } }
 function saveKpiList(list) {
@@ -826,9 +900,9 @@ function renderField(stage, fd) {
       '<div id="' + id + '_result" style="margin-top:6px"></div>';
   }
   if (fd.type === "textarea") {
-    return '<label>' + esc(fd.key) + '</label><textarea id="' + id + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">' + esc(val) + '</textarea>';
+    return '<label>' + esc(fd.label || fd.key) + '</label><textarea id="' + id + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">' + esc(val) + '</textarea>';
   }
-  return '<label>' + esc(fd.key) + '</label><input id="' + id + '" value="' + esc(val) + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">';
+  return '<label>' + esc(fd.label || fd.key) + '</label><input id="' + id + '" value="' + esc(val) + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">';
 }
 function key2id(k) { return k.replace(/[^a-zA-Z0-9ก-๙]/g, "_"); }
 function pick(el, stage, key, val) {
