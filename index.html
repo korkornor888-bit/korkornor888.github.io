@@ -440,6 +440,7 @@ function railHtml(active) {
     { id: "archive", label: "คลัง", fn: "renderArchive()" },
     { id: "trash", label: "ถังขยะ", fn: "renderTrash()" },
     { id: "tags", label: "จัดการแท็ก", fn: "renderTags()" },
+    { id: "complaints", label: "ร้องทุกข์", fn: "renderComplaints()" },
     { id: "myinfo", label: "ข้อมูลของฉัน", fn: "renderMyInfo()" }
   ];
   if (ME.role === "head") {
@@ -1312,6 +1313,27 @@ function archiveWork() {
   if (!confirm('เก็บ "' + D.work.name + '" เข้าคลัง? (จะไม่โชว์ในหน้าแรก แต่ยังกู้คืนได้จากเมนู "คลัง")')) return;
   sb.from("works").update({ archive: "เก็บเข้าคลัง" }).eq("code", D.work.code)
     .then(function (r) { if (r.error) toast(r.error.message); else { toast("เก็บเข้าคลังแล้ว"); renderHome(); } });
+}
+
+/* ---------------- ร้องทุกข์ (ทุกคนเข้าได้) — แสดงคำตอบจากฟอร์มที่แปะให้นักเรียนกรอกภายนอก ---------------- */
+function renderComplaints() {
+  app.innerHTML = shell("complaints", '<div class="top"><h1>ร้องทุกข์</h1></div>', '<div class="card" id="complaintsBody"><span class="spin"></span></div>');
+  sb.from("app_settings").select("value").eq("key", "complaint_form_link").maybeSingle().then(function (r) {
+    var box = document.getElementById("complaintsBody");
+    if (r.error) { box.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
+    var link = (r.data && r.data.value) || "";
+    box.innerHTML =
+      '<div class="muted" style="margin-bottom:10px">ฟอร์มที่แปะให้นักเรียนร้องเรียนปัญหาที่พบในโรงเรียน — วางลิงก์ Google Sheet คำตอบไว้ที่นี่ครั้งเดียว ทุกคนในทีมจะดึงข้อมูลล่าสุดมาดูได้</div>' +
+      '<label>ลิงก์ Google Sheet คำตอบ</label>' +
+      '<input id="complaintLink" value="' + esc(link) + '" placeholder="วางลิงก์ Google Sheet คำตอบ" onchange="saveComplaintLink(this.value)">' +
+      '<button type="button" class="btn bg" style="margin-top:6px" onclick="loadFormTable(\'complaintLink\')">ดึงข้อมูลฟอร์ม</button>' +
+      '<div id="complaintLink_result" style="margin-top:6px"></div>';
+    if (link) loadFormTable("complaintLink");
+  });
+}
+function saveComplaintLink(val) {
+  sb.from("app_settings").upsert({ key: "complaint_form_link", value: val.trim(), updated_at: new Date().toISOString() }, { onConflict: "key" })
+    .then(function (r) { if (r.error) toast(r.error.message); else toast("บันทึกลิงก์แล้ว"); });
 }
 
 /* ---------------- ข้อมูลของฉัน (ทุกคนเข้าได้) ---------------- */
