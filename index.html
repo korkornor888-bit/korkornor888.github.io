@@ -132,6 +132,10 @@ textarea:focus-visible,[tabindex]:focus-visible{
 .entry .r1{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .entry .ti{font-weight:600;font-size:13.5px;color:var(--ink);overflow-wrap:break-word}
 .entry .dt{font-size:11px;color:var(--ink-mute);white-space:nowrap;font-weight:500}
+.list-row .ti{font-size:14.5px}
+.list-icon-btn{width:32px;height:32px;border-radius:10px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:14.5px;cursor:pointer;background:var(--surface);flex:none;padding:0;transition:background-color .12s ease,transform .1s ease}
+.list-icon-btn.del{color:var(--bad);border-color:var(--bad-line);background:var(--bad-wash)}
+.list-icon-btn:active{transform:scale(.92)}
 .entry .de{font-size:12.5px;color:var(--ink-soft);margin-top:3px;white-space:pre-wrap;line-height:1.5;overflow-wrap:break-word}
 .entry .ct{display:inline-block;font-size:11px;background:var(--warn-wash);color:var(--warn);padding:2px 9px;border-radius:var(--radius-pill);margin-top:5px;font-weight:600}
 .entry .sg{display:inline-block;font-size:10.5px;background:var(--brand-wash);color:var(--brand-strong);padding:2px 9px;border-radius:var(--radius-pill);margin-right:6px;font-weight:700}
@@ -300,6 +304,8 @@ table.ftbl tr:last-child td{border-bottom:none}
   .tag-panel-item:hover{background:var(--brand-wash)}
   .tagbox-add:hover{border-color:var(--brand);color:var(--brand)}
   .hbtn:hover{border-color:rgba(249,115,22,.35)}
+  .list-icon-btn:hover{border-color:rgba(249,115,22,.35)}
+  .list-icon-btn.del:hover{background:rgba(220,38,38,.18)}
 }
 </style>
 </head>
@@ -344,7 +350,7 @@ FLOW[KIND_PROJECT] = [
   { n:1, name:"ออกแบบแนวทาง", hint:"เปลี่ยนข้อค้นพบให้เป็นแนวทางที่ทำได้จริง", done:"ได้แผนที่พร้อมนำเสนอ", noLog:true,
     fields:[
       { key:"ผลลัพธ์ที่ต้องการ", type:"textarea" }, { key:"ทางเลือกที่พิจารณา", type:"list" },
-      { key:"แนวทางที่เลือก", type:"textarea" }, { key:"ทรัพยากรที่ต้องใช้", type:"textarea" },
+      { key:"แนวทางที่เลือก", type:"selectFromList", sourceKey:"ทางเลือกที่พิจารณา" }, { key:"ทรัพยากรที่ต้องใช้", type:"textarea" },
       { key:"ตัวชี้วัด", type:"textarea" }, { key:"หมายเหตุ", type:"textarea" } ] },
   { n:2, name:"เสนอและปรับ", hint:"เอาแผนไปคุยกับผู้เกี่ยวข้อง แล้วปรับตามข้อจำกัดจริง", done:"แผนได้รับอนุมัติ พร้อมเริ่มทำจริง",
     fields:[
@@ -431,7 +437,7 @@ function doAuth() {
     });
   });
 }
-function logout() { sb.auth.signOut(); }
+function logout() { if (confirm("ออกจากระบบ?")) sb.auth.signOut(); }
 
 /* ---------------- app shell / icon rail ---------------- */
 function railHtml(active) {
@@ -816,9 +822,20 @@ function drawWork() {
 function renderHistoryItem(h) {
   var when = new Date(h.changed_at);
   var whenTxt = isNaN(when) ? h.changed_at : (String(when.getDate()).padStart(2, "0") + "/" + String(when.getMonth() + 1).padStart(2, "0") + "/" + when.getFullYear() + " " + String(when.getHours()).padStart(2, "0") + ":" + String(when.getMinutes()).padStart(2, "0"));
-  return '<div class="entry"><div class="r1"><span class="ti">ขั้น ' + h.stage + ' · ' + esc(h.key) + '</span><span class="dt">' + esc(whenTxt) + '</span></div>' +
+  return '<div class="entry"><div class="r1" style="align-items:flex-start"><span class="ti">ขั้น ' + h.stage + ' · ' + esc(h.key) + '</span>' +
+    '<span style="display:flex;align-items:center;gap:8px;flex:none"><span class="dt">' + esc(whenTxt) + '</span>' +
+    '<button type="button" class="list-icon-btn del" onclick="delHistoryItem(' + h.id + ')" aria-label="ลบ">✕</button></span></div>' +
     '<div class="de">' + (h.old_value ? '<span style="text-decoration:line-through;opacity:.6">' + esc(h.old_value) + '</span> → ' : "") + esc(h.new_value || "-") + '</div>' +
     '<div class="muted" style="margin-top:3px">โดย ' + esc(h.changed_by_name || "-") + '</div></div>';
+}
+function delHistoryItem(id) {
+  if (!confirm("ลบรายการประวัตินี้?\n\nการลบจะถูกบันทึกเป็นประวัติใหม่ด้วยว่าใครเป็นคนลบและลบเมื่อไหร่ — ลบไม่หายขาดจากร่องรอย")) return;
+  sb.rpc("delete_field_history", { p_id: id }).then(function (r) {
+    if (r.error) { toast(r.error.message); return; }
+    sb.from("field_history").select("*").eq("code", D.work.code).order("changed_at", { ascending: false }).then(function (r2) {
+      D.history = r2.data || []; toast("ลบแล้ว"); drawWork();
+    });
+  });
 }
 var LIST_ORDINAL = ["", "", "ที่สอง", "ที่สาม", "ที่สี่", "ที่ห้า", "ที่หก", "ที่เจ็ด", "ที่แปด", "ที่เก้า", "ที่สิบ"];
 function ordinalTitle(base, idx) {
@@ -1013,12 +1030,12 @@ function renderField(stage, fd) {
           '<button type="button" class="btn bp" style="padding:8px 12px" onclick="saveListEdit(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')">บันทึก</button>' +
           '<button type="button" class="btn bg" style="padding:8px 12px" onclick="LIST_EDIT_IDX=null;drawWork()">ยกเลิก</button></div>';
       }
-      return '<div class="entry" style="display:flex;align-items:flex-start;gap:8px">' +
-        (selecting ? '<input type="checkbox" class="lchk" data-id="' + id + '" data-idx="' + i + '" style="width:auto;margin-top:3px;flex:none">' : "") +
+      return '<div class="entry list-row" style="display:flex;align-items:flex-start;gap:8px">' +
+        (selecting ? '<input type="checkbox" class="lchk" data-id="' + id + '" data-idx="' + i + '" style="width:auto;margin-top:5px;flex:none">' : "") +
         '<span style="flex:1"><span class="ti">' + esc(e.text) + '</span> <span class="dt">' + esc(e.date) + '</span></span>' +
-        (selecting ? '<span style="display:flex;gap:10px;flex:none;align-items:center">' +
-          '<b style="cursor:pointer" onclick="LIST_EDIT_IDX=\'' + id + '_' + i + '\';drawWork()" aria-label="แก้ไข">✎</b>' +
-          '<b style="cursor:pointer;color:var(--bad)" onclick="listDelOne(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')" aria-label="ลบ">✕</b></span>' : "") +
+        (selecting ? '<span style="display:flex;gap:8px;flex:none;align-items:center">' +
+          '<button type="button" class="list-icon-btn" onclick="LIST_EDIT_IDX=\'' + id + '_' + i + '\';drawWork()" aria-label="แก้ไข">✎</button>' +
+          '<button type="button" class="list-icon-btn del" onclick="listDelOne(' + stage + ',\'' + esc(fd.key) + '\',' + i + ')" aria-label="ลบ">✕</button></span>' : "") +
         '</div>';
     }).join("");
     return '<label>' + esc(fd.key) + '</label>' + (rows || '<div class="muted">ยังไม่มีรายการ</div>') +
@@ -1027,6 +1044,15 @@ function renderField(stage, fd) {
       '<button type="button" class="btn ' + (selecting ? "bp" : "bg") + '" onclick="toggleListSelect(\'' + id + '\')">เลือก</button>' +
       (selecting && arr.length ? '<button type="button" class="btn bd" onclick="listDelSelected(' + stage + ',\'' + esc(fd.key) + '\',\'' + id + '\')">ลบที่เลือก</button>' : "") +
       '</div>';
+  }
+  if (fd.type === "selectFromList") {
+    var srcOpts = logEntries(stage, fd.sourceKey).map(function (e) { return e.text; });
+    if (!srcOpts.length) {
+      return '<label>' + esc(fd.key) + '</label><div class="muted">ยังไม่มีทางเลือก — เพิ่ม "' + esc(fd.sourceKey) + '" ก่อน</div>';
+    }
+    return '<label>' + esc(fd.key) + '</label><select id="' + id + '" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">' +
+      '<option value=""' + (!val ? " selected" : "") + '>— เลือกทางเลือก —</option>' +
+      srcOpts.map(function (o) { return '<option' + (o === val ? " selected" : "") + '>' + esc(o) + '</option>'; }).join("") + '</select>';
   }
   if (fd.type === "formlink") {
     return '<label>' + esc(fd.key) + '</label><input id="' + id + '" value="' + esc(val) + '" placeholder="วางลิงก์ Google Sheet คำตอบ" onchange="svf(' + stage + ',\'' + esc(fd.key) + '\',this.value)">' +
@@ -1072,7 +1098,9 @@ function applyStatusAuto(stage, key, val) {
 function pick(el, stage, key, val) {
   var p = el.parentNode;
   for (var i = 0; i < p.children.length; i++) p.children[i].classList.remove("on");
-  el.classList.add("on"); svf(stage, key, val);
+  el.classList.add("on");
+  D.fields[stage + "|" + key] = val; // optimistic local update — avoids a status-driven redraw (applyStatusAuto) rendering with the stale value before svf's save resolves
+  svf(stage, key, val);
   applyStatusAuto(stage, key, val);
 }
 function svf(stage, key, val) {
@@ -1315,17 +1343,20 @@ function archiveWork() {
     .then(function (r) { if (r.error) toast(r.error.message); else { toast("เก็บเข้าคลังแล้ว"); renderHome(); } });
 }
 
-/* ---------------- ร้องทุกข์ (ทุกคนเข้าได้) — แสดงคำตอบจากฟอร์มที่แปะให้นักเรียนกรอกภายนอก ---------------- */
+/* ---------------- ร้องทุกข์ (ทุกคนเข้าได้ ดูได้ / แก้ลิงก์ได้แค่หัวจ่าย) — แสดงคำตอบจากฟอร์มที่แปะให้นักเรียนกรอกภายนอก ---------------- */
 function renderComplaints() {
   app.innerHTML = shell("complaints", '<div class="top"><h1>ร้องทุกข์</h1></div>', '<div class="card" id="complaintsBody"><span class="spin"></span></div>');
   sb.from("app_settings").select("value").eq("key", "complaint_form_link").maybeSingle().then(function (r) {
     var box = document.getElementById("complaintsBody");
     if (r.error) { box.innerHTML = '<div class="err">' + esc(r.error.message) + '</div>'; return; }
     var link = (r.data && r.data.value) || "";
+    var isHead = ME.role === "head";
     box.innerHTML =
-      '<div class="muted" style="margin-bottom:10px">ฟอร์มที่แปะให้นักเรียนร้องเรียนปัญหาที่พบในโรงเรียน — วางลิงก์ Google Sheet คำตอบไว้ที่นี่ครั้งเดียว ทุกคนในทีมจะดึงข้อมูลล่าสุดมาดูได้</div>' +
-      '<label>ลิงก์ Google Sheet คำตอบ</label>' +
-      '<input id="complaintLink" value="' + esc(link) + '" placeholder="วางลิงก์ Google Sheet คำตอบ" onchange="saveComplaintLink(this.value)">' +
+      '<div class="muted" style="margin-bottom:10px">ฟอร์มร้องทุกข์ — แปะลิงก์ Google Sheet คำตอบของฟอร์มที่ให้นักเรียนในโรงเรียนกรอกไว้ที่นี่ แล้วระบบจะดึงข้อมูลมาแสดง' + (isHead ? "" : " (แก้ลิงก์ได้เฉพาะหัวจ่าย)") + '</div>' +
+      (isHead
+        ? '<label>ลิงก์ Google Sheet คำตอบ</label>' +
+          '<input id="complaintLink" value="' + esc(link) + '" placeholder="วางลิงก์ Google Sheet คำตอบ" onchange="saveComplaintLink(this.value)">'
+        : '<label>ลิงก์ Google Sheet คำตอบ</label><input id="complaintLink" value="' + esc(link) + '" disabled>') +
       '<button type="button" class="btn bg" style="margin-top:6px" onclick="loadFormTable(\'complaintLink\')">ดึงข้อมูลฟอร์ม</button>' +
       '<div id="complaintLink_result" style="margin-top:6px"></div>';
     if (link) loadFormTable("complaintLink");
@@ -1585,6 +1616,7 @@ function bulkRestore() {
   });
 }
 function restoreWork(code) {
+  if (!confirm("กู้คืนงานนี้กลับมาใช้งาน?")) return;
   sb.from("works").update({ archive: "ใช้งาน", deleted_at: null }).eq("code", code).then(function (r) { if (r.error) toast(r.error.message); else renderTrash(); });
 }
 function permanentDelete(code, name) {
