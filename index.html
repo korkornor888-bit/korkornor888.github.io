@@ -1638,6 +1638,7 @@ function permanentDelete(code, name) {
 
 /* ---------------- users + backup (head only) ---------------- */
 function renderUsers() {
+  if (ME.role !== "head") { renderHome(); return; }
   app.innerHTML = shell("users", '<div class="top"><h1>จัดการผู้ใช้</h1></div>',
     '<div class="card"><div style="font-weight:600;margin-bottom:6px">สร้างบัญชีใหม่</div>' +
     '<label>ชื่อที่แสดง</label><input id="nu_name">' +
@@ -1682,6 +1683,7 @@ function deleteMember(id, name) {
   sb.from("profiles").delete().eq("id", id).then(function (r) { if (r.error) toast(r.error.message); else { toast("ลบสมาชิกแล้ว"); loadUserList(); } });
 }
 function createUserAsHead() {
+  if (ME.role !== "head") { toast("เฉพาะหัวจ่ายเท่านั้น"); return; }
   var name = document.getElementById("nu_name").value.trim();
   var email = document.getElementById("nu_email").value.trim();
   var pass = document.getElementById("nu_pass").value;
