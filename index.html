@@ -1389,7 +1389,7 @@ function renderMyInfo() {
 function saveMyName() {
   var name = document.getElementById("my_name").value.trim();
   if (!name) { toast("ชื่อห้ามว่าง"); return; }
-  sb.from("profiles").update({ name: name }).eq("id", ME.id).then(function (r) {
+  sb.rpc("update_my_name", { new_name: name }).then(function (r) {
     if (r.error) { toast(r.error.message); return; }
     ME.name = name; toast("บันทึกชื่อแล้ว"); renderMyInfo();
   });
