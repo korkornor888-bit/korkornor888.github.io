@@ -421,19 +421,22 @@ function doAuth() {
   msg.innerHTML = '<span class="spin"></span>';
   sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
     if (!r.error) { loadMe_(r.data.user); return; }
-    // ไม่มีบัญชีนี้ (หรือรหัสผ่านผิด) — ถามยืนยันก่อนสมัครให้อัตโนมัติ กันพิมพ์อีเมลผิดแล้วสร้างบัญชีใหม่โดยไม่ตั้งใจ
-    msg.innerHTML = "";
-    if (!confirm('ไม่พบบัญชีสำหรับอีเมล "' + email + '" (หรือรหัสผ่านไม่ถูกต้อง)\n\nกดตกลงเพื่อสร้างบัญชีใหม่ด้วยอีเมลนี้ — เช็คให้แน่ใจว่าพิมพ์อีเมลถูกต้องก่อนนะ')) return;
-    msg.innerHTML = '<span class="spin"></span>';
+    // ไม่มีบัญชีนี้ (หรือรหัสผ่านผิด) — เช็คว่าอีเมลนี้มีบัญชีอยู่แล้วไหม
     sb.auth.signUp({ email: email, password: pass, options: { data: { name: "name1122" } } }).then(function (r2) {
       if (r2.error) { msg.innerHTML = '<div class="err">' + esc(r2.error.message) + '</div>'; return; }
       var identities = (r2.data.user && r2.data.user.identities) || [];
       if (identities.length === 0) {
+        // มีบัญชีอยู่แล้ว ไม่มีอะไรถูกสร้างใหม่ — แค่รหัสผ่านผิด
         msg.innerHTML = '<div class="err">อีเมลนี้มีบัญชีอยู่แล้ว — รหัสผ่านที่กรอกไม่ถูกต้อง</div>';
         return;
       }
-      if (r2.data.session) { loadMe_(r2.data.user); }
-      else msg.innerHTML = '<div class="muted">สร้างบัญชีใหม่แล้ว — เช็คอีเมลเพื่อยืนยันตัวตน แล้วกลับมาลงชื่อเข้าใช้อีกครั้ง</div>';
+      // อีเมลนี้ไม่เคยมีมาก่อน สมัครให้อัตโนมัติแล้ว (สร้างไปแล้วจริงตอนเช็คขั้นบน แจ้งให้เห็นชัดๆ กันพิมพ์อีเมลผิด)
+      if (r2.data.session) {
+        toast('สร้างบัญชีใหม่ด้วยอีเมล "' + email + '" — ถ้าไม่ใช่อีเมลที่ต้องการ ให้ออกจากระบบแล้วลองพิมพ์อีเมลที่ถูกต้องอีกครั้ง', 6000);
+        loadMe_(r2.data.user);
+      } else {
+        msg.innerHTML = '<div class="muted">สร้างบัญชีใหม่แล้ว — เช็คอีเมลเพื่อยืนยันตัวตน แล้วกลับมาลงชื่อเข้าใช้อีกครั้ง</div>';
+      }
     });
   });
 }
@@ -814,7 +817,8 @@ function drawWork() {
 
   if (ME.role === "head") {
     html += sec("audit", "ประวัติการแก้ไข (หัวจ่ายเท่านั้น)", D.history.length, false,
-      D.history.length ? D.history.map(renderHistoryItem).join("") : '<div class="muted">ยังไม่มีการแก้ไขที่บันทึกไว้</div>');
+      (D.history.length ? '<button type="button" class="btn bd" style="margin-bottom:10px" onclick="delAllHistory()">ลบประวัติทั้งหมด</button>' : "") +
+      (D.history.length ? D.history.map(renderHistoryItem).join("") : '<div class="muted">ยังไม่มีการแก้ไขที่บันทึกไว้</div>'));
   }
 
   app.innerHTML = shell("home", topHtml, html);
@@ -822,15 +826,13 @@ function drawWork() {
 function renderHistoryItem(h) {
   var when = new Date(h.changed_at);
   var whenTxt = isNaN(when) ? h.changed_at : (String(when.getDate()).padStart(2, "0") + "/" + String(when.getMonth() + 1).padStart(2, "0") + "/" + when.getFullYear() + " " + String(when.getHours()).padStart(2, "0") + ":" + String(when.getMinutes()).padStart(2, "0"));
-  return '<div class="entry"><div class="r1" style="align-items:flex-start"><span class="ti">ขั้น ' + h.stage + ' · ' + esc(h.key) + '</span>' +
-    '<span style="display:flex;align-items:center;gap:8px;flex:none"><span class="dt">' + esc(whenTxt) + '</span>' +
-    '<button type="button" class="list-icon-btn del" onclick="delHistoryItem(' + h.id + ')" aria-label="ลบ">✕</button></span></div>' +
+  return '<div class="entry"><div class="r1"><span class="ti">ขั้น ' + h.stage + ' · ' + esc(h.key) + '</span><span class="dt">' + esc(whenTxt) + '</span></div>' +
     '<div class="de">' + (h.old_value ? '<span style="text-decoration:line-through;opacity:.6">' + esc(h.old_value) + '</span> → ' : "") + esc(h.new_value || "-") + '</div>' +
     '<div class="muted" style="margin-top:3px">โดย ' + esc(h.changed_by_name || "-") + '</div></div>';
 }
-function delHistoryItem(id) {
-  if (!confirm("ลบรายการประวัตินี้?\n\nการลบจะถูกบันทึกเป็นประวัติใหม่ด้วยว่าใครเป็นคนลบและลบเมื่อไหร่ — ลบไม่หายขาดจากร่องรอย")) return;
-  sb.rpc("delete_field_history", { p_id: id }).then(function (r) {
+function delAllHistory() {
+  if (!confirm("ลบประวัติการแก้ไขทั้งหมด (" + D.history.length + " รายการ)?\n\nการลบจะถูกบันทึกเป็นประวัติใหม่ 1 รายการด้วยว่าใครเป็นคนลบและลบเมื่อไหร่ — ลบไม่หายขาดจากร่องรอย"))return;
+  sb.rpc("delete_all_field_history", { p_code: D.work.code }).then(function (r) {
     if (r.error) { toast(r.error.message); return; }
     sb.from("field_history").select("*").eq("code", D.work.code).order("changed_at", { ascending: false }).then(function (r2) {
       D.history = r2.data || []; toast("ลบแล้ว"); drawWork();
@@ -1708,7 +1710,7 @@ function downloadBackup() {
 /* ---------------- utils ---------------- */
 var _searchT;
 function onSearchInput(v) { clearTimeout(_searchT); _searchT = setTimeout(function () { F_SEARCH = v; drawHome(); }, 300); }
-function toast(t) { var e = document.createElement("div"); e.className = "toast"; e.textContent = t; document.body.appendChild(e); setTimeout(function () { e.remove(); }, 2800); }
+function toast(t, ms) { var e = document.createElement("div"); e.className = "toast"; e.textContent = t; document.body.appendChild(e); setTimeout(function () { e.remove(); }, ms || 2800); }
 function esc(s) { if (s === null || s === undefined) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
 </script>
 </body>
