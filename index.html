@@ -157,8 +157,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);b
 textarea{min-height:64px;resize:vertical;line-height:1.5}
 
 .radios{display:flex;flex-wrap:wrap;gap:7px}
-.radio{padding:7px 14px;min-height:32px;display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius-pill);font-size:12.5px;font-weight:500;cursor:pointer;background:var(--surface);transition:background-color .12s ease,border-color .12s ease;max-width:100%;overflow-wrap:break-word;color:var(--ink-soft)}
+.radio{padding:7px 14px;min-height:32px;display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius-pill);font-size:12.5px;font-weight:500;cursor:pointer;background:var(--surface);transition:background-color .12s ease,border-color .12s ease,transform .1s ease;max-width:100%;overflow-wrap:break-word;color:var(--ink-soft)}
 .radio.on{background:linear-gradient(180deg,var(--brand-strong),var(--brand));color:#fff;border-color:var(--brand);font-weight:700}
+.radio:active{transform:scale(.94)}
+.sec-h:active{background:rgba(20,20,25,.05)}
+.hbtn:active{transform:scale(.92)}
+.xdel:active{transform:scale(.93)}
 
 .tag{display:inline-flex;align-items:center;gap:6px;background:var(--brand-wash);color:var(--brand-strong);font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:var(--radius-pill);margin:3px 5px 0 0;max-width:100%}
 .tag span{overflow-wrap:break-word}
@@ -229,7 +233,8 @@ textarea{min-height:64px;resize:vertical;line-height:1.5}
 .tagbox-h{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:8px}
 .tagbox-add{width:28px;height:28px;border-radius:var(--radius-pill);border:1px dashed var(--line);background:transparent;color:var(--ink-mute);font-size:16px;line-height:1;cursor:pointer;vertical-align:middle}
 #tagPanel{margin-top:8px;border-top:1px solid var(--line);padding-top:8px;max-height:220px;overflow-y:auto}
-.tag-panel-item{padding:9px 8px;border-radius:var(--radius-sm);font-size:13.5px;cursor:pointer;color:var(--ink)}
+.tag-panel-item{padding:9px 8px;border-radius:var(--radius-sm);font-size:13.5px;cursor:pointer;color:var(--ink);transition:background-color .1s ease}
+.tag-panel-item:active{background:var(--brand-wash)}
 .tag-panel-item:first-child{color:var(--brand);font-weight:600}
 .kpi-top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink)}
 .kpi-top b{font-weight:700;color:var(--brand)}
@@ -410,7 +415,10 @@ function doAuth() {
   msg.innerHTML = '<span class="spin"></span>';
   sb.auth.signInWithPassword({ email: email, password: pass }).then(function (r) {
     if (!r.error) { loadMe_(r.data.user); return; }
-    // ไม่มีบัญชีนี้ (หรือรหัสผ่านผิด) — ลองสมัครให้อัตโนมัติ
+    // ไม่มีบัญชีนี้ (หรือรหัสผ่านผิด) — ถามยืนยันก่อนสมัครให้อัตโนมัติ กันพิมพ์อีเมลผิดแล้วสร้างบัญชีใหม่โดยไม่ตั้งใจ
+    msg.innerHTML = "";
+    if (!confirm('ไม่พบบัญชีสำหรับอีเมล "' + email + '" (หรือรหัสผ่านไม่ถูกต้อง)\n\nกดตกลงเพื่อสร้างบัญชีใหม่ด้วยอีเมลนี้ — เช็คให้แน่ใจว่าพิมพ์อีเมลถูกต้องก่อนนะ')) return;
+    msg.innerHTML = '<span class="spin"></span>';
     sb.auth.signUp({ email: email, password: pass, options: { data: { name: "name1122" } } }).then(function (r2) {
       if (r2.error) { msg.innerHTML = '<div class="err">' + esc(r2.error.message) + '</div>'; return; }
       var identities = (r2.data.user && r2.data.user.identities) || [];
